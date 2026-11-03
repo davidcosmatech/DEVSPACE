@@ -1,0 +1,216 @@
+# DEVSPACE 3.0
+
+**Your personal developer workspace.** A multi-user workspace for projects, notes, GitHub profiles, browser workspaces, Markdown files and data backup.
+
+DEVSPACE is a working Next.js application — not a static dashboard mock-up. Every card, counter, list and progress bar on the dashboard is backed by real database records, and every action is implemented end to end.
+
+![DEVSPACE dashboard](docs/screenshots/dashboard.png)
+
+## What is included
+
+- **Authentication** — registration, email/password sign-in, sign-out, password reset, protected routes and session handling. Supabase Auth in production; a secure local provider for development.
+- **Projects** — full CRUD, search, status and technology filters, priorities, repository links, list and grid views.
+- **Notes** — Markdown editor and preview, autosave with unsaved-change protection, pinning, categories, search and deletion.
+- **GitHub** — live public profile and repository data from the GitHub REST API, with loading, empty, not-found, rate-limit and network-failure states.
+- **Browser Workspaces** — workspace CRUD and nested link CRUD with URL validation, categories and safe external links.
+- **Markdown Tracker** — real file uploads with byte-level progress, private per-user storage, download, pending records and deletion.
+- **Settings** — profile and avatar management, persistent dark/light themes, locale preference, JSON export, safe import preview and account deletion.
+- **Backup & restore** — versioned JSON format, duplicate detection, no cross-account overwrite, transactional import.
+- **Responsive design** — fixed desktop sidebar, drawer navigation on mobile, single-column cards, responsive tables and touch-friendly controls.
+- **Security** — server-derived ownership on every query, Zod validation, secure HttpOnly sessions, RLS policies for Supabase and private file storage.
+- **Quality gates** — TypeScript, ESLint, 19 unit/integration tests, 9 Playwright end-to-end tests and a production build.
+
+## Demo
+
+The local development database is seeded with a fully populated workspace:
+
+```text
+Email:    demo@devspace.app
+Password: Devspace123!
+```
+
+The demo account is created **only** by the local PGlite provider. It is not created when Supabase credentials are configured.
+
+## Technology
+
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router, Server Components, Server Actions) |
+| UI | React 19, Tailwind CSS 4, custom CSS design system, Lucide icons |
+| Language | TypeScript 5 |
+| Database | PostgreSQL |
+| Production database | Supabase |
+| Local development database | PGlite (PostgreSQL compiled to WASM, persisted under `.data/`) |
+| ORM | Drizzle ORM + Drizzle Kit |
+| Validation | Zod |
+| Forms | React Hook Form + `@hookform/resolvers` |
+| Auth | Supabase Auth (production) / scrypt + signed JWT cookie (local) |
+| Files | Supabase Storage (production) / private local filesystem (development) |
+| Tests | Vitest, Playwright |
+
+## Quick start
+
+Requirements: Node.js 20.9+ and npm.
+
+```bash
+npm install
+cp .env.example .env.local   # optional for local mode
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) and use the demo credentials above, or create an account.
+
+No Supabase account is required for local evaluation. With no `DATABASE_URL`, DEVSPACE runs a real PostgreSQL engine locally via PGlite and stores uploads in `.data/storage`.
+
+To reset the demo workspace:
+
+```bash
+# stop the dev server first
+rm -rf .data
+npm run dev
+```
+
+### Environment modes
+
+| Mode | Trigger | Auth | Database | Files |
+|---|---|---|---|---|
+| Local | No `DATABASE_URL` / Supabase keys | Local scrypt + signed HttpOnly session | PGlite in `.data/pglite` | `.data/storage` |
+| Production | Supabase + `DATABASE_URL` configured | Supabase Auth (`@supabase/ssr`) | Supabase PostgreSQL | Private Supabase Storage bucket |
+
+> PGlite is a development convenience only. Serverless Vercel deployments need Supabase (or another hosted PostgreSQL) and Supabase Storage. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+## Production configuration
+
+1. Create a Supabase project.
+2. Copy `.env.example` to `.env.local` and fill in:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+   - `DATABASE_URL` (pooled connection)
+   - `DIRECT_URL` (direct connection for migrations)
+   - `SUPABASE_SERVICE_ROLE_KEY` (server-only; storage and account administration)
+   - `SESSION_SECRET` (at least 32 random characters)
+   - `NEXT_PUBLIC_SITE_URL`
+3. Apply the schema, RLS and storage policies:
+
+```bash
+npm run db:migrate
+npm run db:rls
+npm run db:storage
+```
+
+4. In Supabase Auth, add redirect URLs:
+   - `http://localhost:3000/callback`
+   - `https://your-production-domain/callback`
+5. Deploy to Vercel with the same environment variables.
+
+Full instructions: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+## Scripts
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Start the development server |
+| `npm run build` | Production build |
+| `npm run start` | Serve the production build |
+| `npm run typecheck` | TypeScript without emitting |
+| `npm run lint` | ESLint |
+| `npm test` | Vitest unit + integration tests |
+| `npm run test:e2e` | Playwright browser tests |
+| `npm run db:generate` | Generate a Drizzle migration |
+| `npm run db:migrate` | Apply migrations |
+| `npm run db:check` | Validate migration consistency |
+| `npm run db:studio` | Open Drizzle Studio |
+| `npm run db:rls` | Apply `supabase/rls.sql` to the configured database |
+| `npm run db:storage` | Create the private bucket and storage policies |
+| `npm run db:setup` | Migrations + RLS + storage in one command |
+
+## Project structure
+
+```text
+src/
+├── app/
+│   ├── (auth)/                 login, register, reset, callback
+│   ├── (workspace)/            dashboard, projects, notes, github, workspaces, tracker, settings
+│   ├── api/                    search, export, import, tracker upload/download
+│   ├── globals.css             design system and responsive layouts
+│   └── layout.tsx
+├── components/
+│   ├── dashboard/              banner art
+│   ├── icons/                  GitHub brand mark
+│   ├── layout/                 app shell, sidebar, header, command palette
+│   └── ui/                     modal, badges, avatar, page header, confirmation
+├── features/
+│   ├── auth/                   actions and forms
+│   ├── projects/               actions + list/grid UI
+│   ├── notes/                  actions + Markdown workspace
+│   ├── github/                 username action + live profile UI
+│   ├── workspaces/             workspace/link actions + cards
+│   ├── tracker/                upload/delete actions + progress UI
+│   ├── settings/               profile, appearance, data, account
+│   └── dashboard/              dashboard queries
+├── lib/
+│   ├── auth/                   session, password, Supabase adapter
+│   ├── db/                     Drizzle schema, connection, seed
+│   ├── queries/                shell counts and notifications
+│   ├── validation/             shared Zod schemas
+│   ├── github.ts               GitHub REST client
+│   ├── storage.ts              local/Supabase file adapter
+│   └── utils.ts
+drizzle/                        versioned SQL migrations
+supabase/                       RLS and storage policy SQL
+tests/                          unit, integration and e2e tests
+docs/                           architecture, database, deployment, security
+```
+
+## Design
+
+The interface follows the supplied DEVSPACE 3.0 reference: graphite surfaces, a single emerald accent, dense but calm information hierarchy, a fixed navigation rail, a personalised welcome banner, five live statistics, project and note overview panels, a GitHub profile card and bottom tracker/quick-action panels.
+
+Dark and light themes share the same token system in `src/app/globals.css`. Motion is restrained and respects `prefers-reduced-motion`.
+
+### Screens
+
+| Projects | Notes |
+|---|---|
+| ![Projects](docs/screenshots/projects.png) | ![Notes](docs/screenshots/notes.png) |
+
+| Markdown Tracker | Settings |
+|---|---|
+| ![Markdown Tracker](docs/screenshots/tracker.png) | ![Settings](docs/screenshots/settings.png) |
+
+| Browser Workspaces | GitHub |
+|---|---|
+| ![Browser Workspaces](docs/screenshots/workspaces.png) | ![GitHub](docs/screenshots/github.png) |
+
+| Light theme | Mobile |
+|---|---|
+| ![Light dashboard](docs/screenshots/dashboard-light.png) | <img src="docs/screenshots/dashboard-mobile.png" alt="Mobile dashboard" width="390" /> |
+
+The original supplied reference is preserved at [docs/reference/reference-dashboard.png](docs/reference/reference-dashboard.png).
+
+## Testing
+
+```bash
+npm run typecheck
+npm run lint
+npm test
+npm run test:e2e
+npm run build
+```
+
+The Playwright suite uses the locally installed Chrome channel by default. To use a downloaded Playwright browser, remove `channel` from `playwright.config.ts`.
+
+## Deployment status
+
+This repository is ready for production deployment but has **not** been deployed from this environment because no Supabase project, Vercel token or GitHub remote credentials were available. No credentials are fabricated. See the final section of [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the exact remaining steps and required access.
+
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Database](docs/DATABASE.md)
+- [Deployment](docs/DEPLOYMENT.md)
+- [Security](docs/SECURITY.md)
+
+## License
+
+Private project. All rights reserved.

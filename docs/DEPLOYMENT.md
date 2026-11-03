@@ -196,5 +196,5 @@ Local verification performed:
 - `npm run lint` — passed.
 - `npm test` — 19/19 tests passed.
 - `npm run test:e2e` — 9/9 Playwright flows passed in a single run.
-- `npm run build` — passed; see the delivery summary for the final build confirmation.
+- `npm run build` — passed (Next.js 16.4.5 production build, all routes compiled).
 - Browser smoke test — all seven workspace pages, CRUD flows, theme persistence, search, import/export, registration, password reset and account deletion verified in Chrome.

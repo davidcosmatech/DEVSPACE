@@ -14,7 +14,8 @@ export function BannerArt() {
           <stop offset="1" stopColor="#06110e" stopOpacity="0.05" />
         </linearGradient>
         <linearGradient id="screenFill" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#061b14" />
+          <stop offset="0" stopColor="#083326" />
+          <stop offset="0.55" stopColor="#061b14" />
           <stop offset="1" stopColor="#03110c" />
         </linearGradient>
         <linearGradient id="laptopBody" x1="0" y1="0" x2="0" y2="1">
@@ -38,8 +39,8 @@ export function BannerArt() {
       </defs>
 
       <rect width="740" height="190" fill="url(#bannerFade)" />
-      <ellipse cx="565" cy="95" rx="185" ry="105" fill="url(#smoke)" filter="url(#softGlow)" />
-      <ellipse cx="645" cy="37" rx="95" ry="52" fill="#00e79f" opacity="0.1" filter="url(#softGlow)" />
+      <ellipse cx="565" cy="95" rx="205" ry="118" fill="url(#smoke)" filter="url(#softGlow)" />
+      <ellipse cx="645" cy="37" rx="110" ry="60" fill="#00e79f" opacity="0.15" filter="url(#softGlow)" />
       <ellipse cx="505" cy="167" rx="185" ry="22" fill="#00d995" opacity="0.16" filter="url(#greenGlow)" />
 
       <g opacity="0.16" stroke="#00ffb0" strokeWidth="1">
@@ -49,18 +50,19 @@ export function BannerArt() {
         <path d="M382 174c72-50 143-78 241-86 82-6 118 5 132 20" />
       </g>
 
-      <g transform="translate(365 24) rotate(-4 210 80)">
+      <g transform="translate(130 0) rotate(-4 210 80)">
         <rect x="47" y="5" width="328" height="142" rx="15" fill="#0b1612" stroke="#2b3d36" />
         <rect x="59" y="17" width="304" height="115" rx="5" fill="url(#screenFill)" />
         <path d="M59 17h304v115H59z" stroke="#00d995" strokeOpacity="0.25" />
 
-        <g stroke="#14d995" strokeWidth="2.4" strokeLinecap="round" opacity="0.24">
+        <g stroke="#14d995" strokeWidth="2.4" strokeLinecap="round" opacity="0.32">
           <path d="M76 36h46M76 44h26M133 36h84M76 53h104M76 62h61M76 71h94M76 80h36M76 89h119M76 98h56M76 107h88M76 116h32" />
         </g>
-        <g stroke="#39ffbe" strokeWidth="1.7" strokeLinecap="round" opacity="0.72">
+        <g stroke="#52ffc8" strokeWidth="1.8" strokeLinecap="round" opacity="0.95">
           <path d="M78 39h26M78 48h68M78 57h43M78 66h82M78 75h34M78 84h57M78 93h90M78 102h49M78 111h72" />
         </g>
-        <rect x="189" y="32" width="92" height="58" rx="4" fill="#00d995" opacity="0.035" />
+        <rect x="189" y="32" width="92" height="58" rx="4" fill="#00d995" opacity="0.08" />
+        <rect x="59" y="17" width="304" height="115" rx="5" fill="#00d995" opacity="0.04" />
 
         <ellipse cx="210" cy="150" rx="144" ry="8" fill="#00d995" opacity="0.14" filter="url(#greenGlow)" />
         <path

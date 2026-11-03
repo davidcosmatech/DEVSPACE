@@ -7,8 +7,7 @@ import { Github } from "@/components/icons/github";
 import { NoteGlyph, ProjectGlyph, StatusBadge } from "@/components/ui/badges";
 import { Avatar } from "@/components/ui/avatar";
 import { PanelHeader } from "@/components/ui/page-header";
-import { fetchGitHubProfile } from "@/lib/github";
-import { getShellData } from "@/lib/queries/shell";
+import { getGitHubDisplay } from "@/lib/github";
 import { cn, relativeTime } from "@/lib/utils";
 import type { Viewer } from "@/lib/auth";
 import { getDashboardData } from "@/features/dashboard/queries";
@@ -16,10 +15,7 @@ import { getDashboardData } from "@/features/dashboard/queries";
 export default async function DashboardPage() {
   const { requireViewer } = await import("@/lib/auth");
   const viewer: Viewer = await requireViewer();
-  const [data, shell] = await Promise.all([
-    getDashboardData(viewer.id),
-    getShellData(viewer.id, viewer.githubUsername),
-  ]);
+  const data = await getDashboardData(viewer.id);
   const firstName = viewer.displayName.split(/\s+/)[0] || viewer.displayName;
   const { counts, recent } = data;
 
@@ -43,7 +39,7 @@ export default async function DashboardPage() {
           trendLabel="updated this week"
         />
         <Link href="/github" className="stat-card" style={{ color: "inherit" }}>
-          <span className="stat-icon" style={{ background: "rgba(255,255,255,.06)" }}>
+          <span className="stat-icon github-stat-icon">
             <Github size={23} />
           </span>
           <div className="stat-copy">
@@ -80,7 +76,6 @@ export default async function DashboardPage() {
               ? "nothing tracked yet"
               : `${counts.tracked - counts.uploads} pending upload${counts.tracked - counts.uploads === 1 ? "" : "s"}`
           }
-          tone="info"
         />
       </section>
 
@@ -90,7 +85,7 @@ export default async function DashboardPage() {
         <RecentNotes notes={data.recentNotes} />
 
         <Suspense fallback={<GitHubPanelSkeleton />}>
-          <GitHubPanel username={viewer.githubUsername} fallbackName={viewer.displayName} />
+          <GitHubPanel viewer={viewer} />
         </Suspense>
 
         <UploadTracker uploaded={counts.uploads} total={counts.tracked} />
@@ -113,16 +108,6 @@ export default async function DashboardPage() {
           </div>
         </section>
       </section>
-
-      {shell.counts.pendingUploads > 0 ? (
-        <p style={{ color: "var(--muted)", fontSize: 11, textAlign: "center" }}>
-          {shell.counts.pendingUploads} tracked Markdown file
-          {shell.counts.pendingUploads === 1 ? "" : "s"} still need an upload.{" "}
-          <Link href="/tracker" style={{ color: "var(--accent)" }}>
-            Finish uploads →
-          </Link>
-        </p>
-      ) : null}
     </div>
   );
 }
@@ -270,14 +255,13 @@ function RecentNotes({ notes }: { notes: Awaited<ReturnType<typeof getDashboardD
   );
 }
 
-async function GitHubPanel({
-  username,
-  fallbackName,
-}: {
-  username: string | null;
-  fallbackName: string;
-}) {
-  const result = username ? await fetchGitHubProfile(username) : null;
+async function GitHubPanel({ viewer }: { viewer: Viewer }) {
+  const result = await getGitHubDisplay({
+    userId: viewer.id,
+    username: viewer.githubUsername,
+    cache: viewer.githubCache,
+    cacheUpdatedAt: viewer.githubCacheUpdatedAt,
+  });
 
   return (
     <section className="panel github-panel">
@@ -287,7 +271,7 @@ async function GitHubPanel({
         href="/github"
         linkLabel={result?.ok ? "View Profile" : "Open GitHub"}
       />
-      {!username ? (
+      {!viewer.githubUsername ? (
         <div className="empty-state" style={{ minHeight: 260 }}>
           <span className="empty-icon">
             <Github size={20} />
@@ -312,14 +296,18 @@ async function GitHubPanel({
       ) : (
         <div className="github-card-body">
           <div className="github-identity">
-            <Avatar name={result.profile.name ?? result.profile.login} src={result.profile.avatarUrl} size="xl" />
+            <Avatar
+              name={result.profile.name ?? result.profile.login}
+              src={viewer.avatarUrl}
+              size="xl"
+            />
             <div style={{ minWidth: 0 }}>
               <div className="github-name">{result.profile.name ?? result.profile.login}</div>
               <div className="github-handle">@{result.profile.login}</div>
             </div>
           </div>
           <p className="github-bio">
-            {result.profile.bio || `${fallbackName} is building in public on GitHub.`}
+            {result.profile.bio || `${viewer.displayName} is building in public on GitHub.`}
           </p>
           <div className="github-stats">
             <div className="github-stat">
@@ -335,15 +323,6 @@ async function GitHubPanel({
               <span>Following</span>
             </div>
           </div>
-          <a
-            href={result.profile.htmlUrl}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="btn btn-secondary btn-block btn-sm"
-            style={{ marginTop: 16 }}
-          >
-            Open on GitHub <ArrowUpRight size={13} />
-          </a>
         </div>
       )}
     </section>
@@ -376,20 +355,14 @@ function UploadTracker({ uploaded, total }: { uploaded: number; total: number })
     <section className="panel tracker-panel">
       <PanelHeader icon={UploadCloud} title="Markdown Upload Tracker" href="/tracker" linkLabel="View All" />
       <div className="tracker-body">
-        <div className="progress-row">
-          <span>
-            {uploaded} / {total} files uploaded
-          </span>
-          <span className="tracker-percent">{percent}%</span>
-        </div>
         <div className="progress-track" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
           <div className="progress-fill" style={{ width: `${percent}%` }} />
         </div>
         <div className="tracker-foot">
-          <span>{total === 0 ? "Add a Markdown file to begin" : "Stored in your private workspace"}</span>
-          <Link href="/tracker" style={{ color: "var(--accent)", fontSize: 10.5 }}>
-            Manage files →
-          </Link>
+          <span>
+            {uploaded} / {total} files uploaded
+          </span>
+          <span className="tracker-percent">{percent}%</span>
         </div>
       </div>
     </section>

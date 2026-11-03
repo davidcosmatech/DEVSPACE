@@ -18,7 +18,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Github } from "@/components/icons/github";
 import { Avatar } from "@/components/ui/avatar";
 import { refreshGitHubAction, saveGitHubUsernameAction } from "@/features/github/actions";
-import type { GitHubResult } from "@/lib/github";
+import type { GitHubDisplayResult } from "@/lib/github";
 import { formatDate, relativeTime } from "@/lib/utils";
 
 export function GitHubView({
@@ -26,7 +26,7 @@ export function GitHubView({
   result,
 }: {
   username: string | null;
-  result: GitHubResult | null;
+  result: GitHubDisplayResult | null;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(!username);
@@ -137,6 +137,11 @@ export function GitHubView({
               <span className="badge badge-green">
                 <span className="status-dot" /> Connected
               </span>
+              {result?.ok && result.cached ? (
+                <span className="badge badge-amber" title={result.warning}>
+                  Cached snapshot
+                </span>
+              ) : null}
             </div>
             <p>@{result?.ok ? result.profile.login : username}</p>
             <p style={{ marginTop: 8 }}>

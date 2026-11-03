@@ -11,7 +11,7 @@ DEVSPACE is a working Next.js application — not a static dashboard mock-up. Ev
 - **Authentication** — registration, email/password sign-in, sign-out, password reset, protected routes and session handling. Supabase Auth in production; a secure local provider for development.
 - **Projects** — full CRUD, search, status and technology filters, priorities, repository links, list and grid views.
 - **Notes** — Markdown editor and preview, autosave with unsaved-change protection, pinning, categories, search and deletion.
-- **GitHub** — live public profile and repository data from the GitHub REST API, with loading, empty, not-found, rate-limit and network-failure states.
+- **GitHub** — live public profile and repository data from the GitHub REST API, with a per-user verified snapshot fallback, plus loading, empty, not-found, rate-limit and network-failure states.
 - **Browser Workspaces** — workspace CRUD and nested link CRUD with URL validation, categories and safe external links.
 - **Markdown Tracker** — real file uploads with byte-level progress, private per-user storage, download, pending records and deletion.
 - **Settings** — profile and avatar management, persistent dark/light themes, locale preference, JSON export, safe import preview and account deletion.
@@ -165,6 +165,8 @@ docs/                           architecture, database, deployment, security
 ## Design
 
 The interface follows the supplied DEVSPACE 3.0 reference: graphite surfaces, a single emerald accent, dense but calm information hierarchy, a fixed navigation rail, a personalised welcome banner, five live statistics, project and note overview panels, a GitHub profile card and bottom tracker/quick-action panels.
+
+The dashboard geometry is tuned to the supplied **1672 × 941** reference (280 px rail, 80 px header, 1360 px content canvas, 20 px stat gaps, 345 px overview row and 118 px bottom row). Live database values replace the illustrative numbers in the reference.
 
 Dark and light themes share the same token system in `src/app/globals.css`. Motion is restrained and respects `prefers-reduced-motion`.
 

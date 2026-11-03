@@ -24,6 +24,8 @@ export const profiles = pgTable(
     avatarUrl: text("avatar_url"),
     bio: text("bio").notNull().default(""),
     githubUsername: varchar("github_username", { length: 39 }),
+    githubCache: jsonb("github_cache").$type<Record<string, unknown>>(),
+    githubCacheUpdatedAt: timestamp("github_cache_updated_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

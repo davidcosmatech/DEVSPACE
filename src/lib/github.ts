@@ -1,5 +1,10 @@
 import "server-only";
 
+import { eq } from "drizzle-orm";
+
+import { getDb } from "@/lib/db";
+import { profiles } from "@/lib/db/schema";
+
 export type GitHubProfile = {
   login: string;
   name: string | null;
@@ -31,6 +36,92 @@ export type GitHubResult =
       reason: "not_found" | "rate_limit" | "network" | "invalid";
       error: string;
     };
+
+export type GitHubDisplayResult =
+  | {
+      ok: true;
+      profile: GitHubProfile;
+      repos: GitHubRepo[];
+      cached: boolean;
+      cachedAt: string | null;
+      warning?: string;
+    }
+  | Extract<GitHubResult, { ok: false }>;
+
+type GitHubSnapshot = {
+  profile: GitHubProfile;
+  repos: GitHubRepo[];
+  savedAt: string;
+};
+
+function parseSnapshot(value: Record<string, unknown> | null): GitHubSnapshot | null {
+  if (!value || typeof value !== "object") return null;
+  const profile = value.profile as GitHubProfile | undefined;
+  const repos = value.repos as GitHubRepo[] | undefined;
+  const savedAt = value.savedAt as string | undefined;
+  if (
+    !profile ||
+    typeof profile.login !== "string" ||
+    typeof profile.publicRepos !== "number" ||
+    !Array.isArray(repos) ||
+    typeof savedAt !== "string"
+  ) {
+    return null;
+  }
+  return { profile, repos, savedAt };
+}
+
+/**
+ * Returns live GitHub data when possible. If GitHub is rate limited or
+ * unreachable, a previously verified snapshot belonging to this user is shown
+ * instead with a cached timestamp. Snapshots are written only from successful
+ * GitHub responses.
+ */
+export async function getGitHubDisplay(input: {
+  userId: string;
+  username: string | null;
+  cache: Record<string, unknown> | null;
+  cacheUpdatedAt: Date | null;
+}): Promise<GitHubDisplayResult | null> {
+  if (!input.username) return null;
+
+  const live = await fetchGitHubProfile(input.username);
+  if (live.ok) {
+    const snapshot: GitHubSnapshot = {
+      profile: live.profile,
+      repos: live.repos,
+      savedAt: new Date().toISOString(),
+    };
+    const stale =
+      !input.cacheUpdatedAt || Date.now() - input.cacheUpdatedAt.getTime() > 15 * 60_000;
+    if (stale) {
+      try {
+        const db = await getDb();
+        await db
+          .update(profiles)
+          .set({ githubCache: snapshot, githubCacheUpdatedAt: new Date() })
+          .where(eq(profiles.id, input.userId));
+      } catch {
+        // A cache write failure must not break the live GitHub view.
+      }
+    }
+    return { ...live, cached: false, cachedAt: null };
+  }
+
+  const snapshot = parseSnapshot(input.cache);
+  if (snapshot) {
+    return {
+      ok: true,
+      profile: snapshot.profile,
+      repos: snapshot.repos,
+      cached: true,
+      cachedAt: snapshot.savedAt,
+      warning: live.error,
+    };
+  }
+
+  return live;
+}
 
 const headers = {
   Accept: "application/vnd.github+json",

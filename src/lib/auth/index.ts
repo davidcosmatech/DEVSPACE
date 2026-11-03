@@ -18,6 +18,8 @@ export type Viewer = {
   avatarUrl: string | null;
   bio: string;
   githubUsername: string | null;
+  githubCache: Record<string, unknown> | null;
+  githubCacheUpdatedAt: Date | null;
   createdAt: Date;
 };
 

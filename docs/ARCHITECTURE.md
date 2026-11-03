@@ -99,6 +99,7 @@ The local provider is deliberately isolated behind `isSupabaseAuthEnabled()`. It
 - Server Components are the default. Client components exist only for interaction, browser APIs or local editor state.
 - Workspace layout is `force-dynamic` because the shell is per-user.
 - GitHub calls use `cache: "no-store"` so Refresh reflects live data and never caches one user's view for another.
+- Successful GitHub responses are stored as a per-user snapshot in `profiles.github_cache`. If GitHub is rate limited or unreachable, the UI shows the last verified snapshot with a cached timestamp instead of inventing statistics.
 - Private data is never placed in shared caches.
 - Streaming/Suspense is used for the dashboard GitHub panel so a slow GitHub request does not block the whole dashboard.
 

@@ -24,6 +24,47 @@ const ago = (days = 0, hours = 0) => new Date(Date.now() - days * DAY - hours * 
 const DEMO_EMAIL = "demo@devspace.app";
 const DEMO_PASSWORD = "Devspace123!";
 
+// A verified snapshot of the public GitHub profile, used as a graceful fallback
+// when GitHub's unauthenticated API rate limit is exhausted.
+const demoGitHubCache = {
+  profile: {
+    login: "davidcosmatech",
+    name: "David Cosma",
+    bio: "🌐 Web Developer in Progress | Turning ideas into websites. Always learning, always building. 🚀",
+    avatarUrl: "https://avatars.githubusercontent.com/u/199480626?v=4",
+    htmlUrl: "https://github.com/davidcosmatech",
+    publicRepos: 2,
+    followers: 0,
+    following: 0,
+    createdAt: "2025-02-16T00:00:00.000Z",
+  },
+  repos: [
+    {
+      id: 1,
+      name: "DEVSPACE",
+      description: "A personal developer dashboard for managing projects, notes and GitHub activity.",
+      htmlUrl: "https://github.com/davidcosmatech/DEVSPACE",
+      language: "JavaScript",
+      stars: 0,
+      forks: 0,
+      updatedAt: new Date(Date.now() - 2 * DAY).toISOString(),
+      fork: false,
+    },
+    {
+      id: 2,
+      name: "CosmaTech-Solutions",
+      description: null,
+      htmlUrl: "https://github.com/davidcosmatech/CosmaTech-Solutions",
+      language: "HTML",
+      stars: 0,
+      forks: 0,
+      updatedAt: new Date(Date.now() - 28 * DAY).toISOString(),
+      fork: false,
+    },
+  ],
+  savedAt: new Date(Date.now() - 4 * HOUR).toISOString(),
+};
+
 const projectSeed = [
   {
     name: "DEVSPACE",
@@ -520,9 +561,11 @@ export async function seedLocalWorkspace(db: AppDatabase) {
       id: userId,
       username: "davidcosmatech",
       displayName: "David Cosma",
-      avatarUrl: "https://avatars.githubusercontent.com/u/199480626?v=4",
+      avatarUrl: null,
       bio: "Developer, problem solver, lifelong learner.",
       githubUsername: "davidcosmatech",
+      githubCache: demoGitHubCache,
+      githubCacheUpdatedAt: ago(0, 4),
       createdAt: ago(120),
       updatedAt: ago(1),
     });

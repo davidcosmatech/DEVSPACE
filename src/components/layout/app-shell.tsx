@@ -7,14 +7,16 @@ import {
   Bell,
   ChevronDown,
   FileText,
+  Folder,
   FolderKanban,
+  House,
   LayoutDashboard,
   LogOut,
   Menu,
   Moon,
+  Rocket,
   Search,
   Settings,
-  SlidersHorizontal,
   Sun,
   UploadCloud,
   User,
@@ -23,33 +25,32 @@ import {
 
 import { BrandLockup } from "@/components/brand";
 import { Github } from "@/components/icons/github";
+import { BrowserWorkspaceIcon, TrackerIcon } from "@/components/icons/nav-icons";
 import { Avatar } from "@/components/ui/avatar";
 import { useTheme } from "@/components/theme-provider";
 import { logoutAction } from "@/features/auth/actions";
 import { persistThemeAction } from "@/features/settings/actions";
 import type { Viewer } from "@/lib/auth";
-import type { ShellCounts, ShellNotification } from "@/lib/queries/shell";
+import type { ShellNotification } from "@/lib/queries/shell";
 import { cn, relativeTime } from "@/lib/utils";
 
 const nav = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/projects", label: "Projects", icon: FolderKanban },
+  { href: "/dashboard", label: "Dashboard", icon: House },
+  { href: "/projects", label: "Projects", icon: Folder },
   { href: "/notes", label: "Notes", icon: FileText },
   { href: "/github", label: "GitHub", icon: Github },
-  { href: "/workspaces", label: "Browser Workspaces", icon: UploadCloud },
-  { href: "/tracker", label: "Markdown Tracker", icon: SlidersHorizontal },
+  { href: "/workspaces", label: "Browser Workspaces", icon: BrowserWorkspaceIcon },
+  { href: "/tracker", label: "Markdown Tracker", icon: TrackerIcon },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function AppShell({
   viewer,
-  counts,
   notifications,
   theme,
   children,
 }: {
   viewer: Viewer;
-  counts: ShellCounts;
   notifications: ShellNotification[];
   theme: "dark" | "light";
   children: React.ReactNode;
@@ -85,7 +86,7 @@ export function AppShell({
         />
       ) : null}
 
-      <Sidebar viewer={viewer} counts={counts} open={mobileOpen} onClose={() => setMobileOpen(false)} />
+      <Sidebar open={mobileOpen} onClose={() => setMobileOpen(false)} />
 
       <div className="app-main">
         <Header
@@ -100,13 +101,9 @@ export function AppShell({
 }
 
 function Sidebar({
-  viewer,
-  counts,
   open,
   onClose,
 }: {
-  viewer: Viewer;
-  counts: ShellCounts;
   open: boolean;
   onClose: () => void;
 }) {
@@ -122,18 +119,12 @@ function Sidebar({
   return (
     <aside className={cn("sidebar", open && "open")}>
       <Link href="/dashboard" className="sidebar-brand" onClick={onClose} aria-label="DEVSPACE dashboard">
-        <BrandLockup size={21} markSize={42} />
+        <BrandLockup size={25} markSize={46} />
       </Link>
 
       <nav className="sidebar-nav" aria-label="Workspace navigation">
         {nav.map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-          const badge =
-            item.href === "/tracker" && counts.pendingUploads > 0
-              ? counts.pendingUploads
-              : item.href === "/projects" && counts.projects > 0
-                ? counts.projects
-                : null;
           return (
             <Link
               key={item.href}
@@ -142,9 +133,8 @@ function Sidebar({
               className={cn("sidebar-link", active && "active")}
               aria-current={active ? "page" : undefined}
             >
-              <item.icon size={19} strokeWidth={1.9} />
+              <item.icon size={22} strokeWidth={1.8} />
               {item.label}
-              {badge ? <span className="sidebar-badge">{badge}</span> : null}
             </Link>
           );
         })}
@@ -167,43 +157,16 @@ function Sidebar({
           </div>
         </div>
 
+        <div className="sidebar-divider" />
+
         <div className="sidebar-promo">
           <span className="sidebar-promo-icon">
-            <span aria-hidden="true">✦</span>
+            <Rocket size={14} />
           </span>
           <p>
             <strong>Developer Productivity</strong>
             Made Simple
           </p>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "0 6px" }}>
-          <Avatar name={viewer.displayName} src={viewer.avatarUrl} size="sm" />
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div
-              style={{
-                overflow: "hidden",
-                color: "var(--text-soft)",
-                fontSize: 11,
-                fontWeight: 600,
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {viewer.displayName}
-            </div>
-            <div
-              style={{
-                overflow: "hidden",
-                color: "var(--muted)",
-                fontSize: 9.5,
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              @{viewer.username}
-            </div>
-          </div>
         </div>
       </div>
     </aside>
@@ -288,8 +251,7 @@ function Header({
                 setUserOpen(false);
               }}
             >
-              <Bell size={18} />
-              {notifications.length > 0 ? <span className="notification-dot" /> : null}
+              <Bell size={19} />
             </button>
 
             {notificationsOpen ? (
@@ -359,9 +321,8 @@ function Header({
               <Avatar name={viewer.displayName} src={viewer.avatarUrl} size="md" />
               <span className="topbar-user-copy">
                 <strong>{viewer.displayName}</strong>
-                <span>@{viewer.username}</span>
               </span>
-              <ChevronDown size={14} style={{ color: "var(--muted)" }} />
+              <ChevronDown size={15} style={{ color: "var(--muted)" }} />
             </button>
 
             {userOpen ? (

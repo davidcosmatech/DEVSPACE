@@ -83,6 +83,13 @@ The local provider cannot be activated accidentally when Supabase is configured:
 - The client receives only the Supabase URL and publishable key.
 - No credential is printed in logs, documentation or chat.
 
+## GitHub data
+
+- Only public GitHub REST API data is requested; no token is required or stored.
+- Successful responses are snapshotted per user in `profiles.github_cache`.
+- When GitHub rate-limits or is unreachable, the last verified snapshot is displayed and labelled as cached. Statistics are never invented.
+- Cache writes occur server-side and are scoped to the authenticated user.
+
 ## Backup import safety
 
 - The imported owner is always the current authenticated user.

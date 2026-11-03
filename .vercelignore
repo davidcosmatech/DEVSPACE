@@ -1,0 +1,11 @@
+.git
+.next
+.data
+.tmp
+.env
+.env.*
+test-results
+playwright-report
+docs
+tests
+*.log

@@ -95,7 +95,39 @@ async function ensureSupabaseProfile(input: {
       avatarUrl: input.avatarUrl ?? null,
       bio: "",
     })
+    .onConflictDoNothing()
     .returning();
+
+  if (!created) {
+    const existingAfterRace = await db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.id, input.id))
+      .limit(1);
+    if (existingAfterRace[0]) {
+      return { ...existingAfterRace[0], email: input.email };
+    }
+
+    const retryUsername = uniqueUsername(`${baseUsername}_${Math.random().toString(36).slice(2, 6)}`);
+    const [retried] = await db
+      .insert(profiles)
+      .values({
+        id: input.id,
+        username: retryUsername,
+        displayName: input.displayName || input.email.split("@")[0] || "Developer",
+        avatarUrl: input.avatarUrl ?? null,
+        bio: "",
+      })
+      .returning();
+    if (!retried) {
+      throw new Error("Could not create the user profile.");
+    }
+    await db
+      .insert(userSettings)
+      .values({ userId: input.id, theme: "dark", language: "en", preferences: {} })
+      .onConflictDoNothing();
+    return { ...retried, email: input.email };
+  }
 
   await db
     .insert(userSettings)

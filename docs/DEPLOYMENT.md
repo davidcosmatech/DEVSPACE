@@ -194,19 +194,20 @@ After deployment:
 | RLS | Enabled on all nine public tables; 4 policies per product table |
 | Storage | Private `markdown-files` bucket, 4 MB limit, 4 owner policies |
 | Auth | Supabase Auth; demo account provisioned and confirmed |
+| Registration | `SUPABASE_SKIP_EMAIL_CONFIRMATION=true`; admin-confirmed signup avoids Supabase's default email rate limit |
 | Demo workspace | 5 projects, 12 notes, 3 workspaces, 10 tracker records, 8 real uploaded files |
 | Production verification | Login, project CRUD, Storage upload/download/delete, all pages, theme, export — passed with zero console errors |
 
 ### Remaining dashboard step
 
-New-user confirmation and password-reset emails still require Supabase URL configuration. In **Supabase → Authentication → URL Configuration**:
+Registration now creates confirmed users through the Admin API, so the previous “email rate limit exceeded” error no longer blocks signup. Password-reset emails still require Supabase URL configuration and a working mail provider. In **Supabase → Authentication → URL Configuration**:
 
 - Site URL: `https://devspace-ruby.vercel.app`
 - Redirect URLs:
   - `https://devspace-ruby.vercel.app/callback`
   - `http://localhost:3000/callback`
 
-This cannot be changed with the service-role key; the Supabase Management API requires a personal access token. The seeded demo account works without this step. For reliable production email delivery, configure custom SMTP in Supabase as well.
+This cannot be changed with the service-role key; the Supabase Management API requires a personal access token. For reliable production email delivery and verified signups, configure custom SMTP, then set `SUPABASE_SKIP_EMAIL_CONFIRMATION=false`.
 
 ### Future deployments
 

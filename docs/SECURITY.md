@@ -130,7 +130,8 @@ Additional hardening recommended for production:
 - The local auth provider is for single-instance development only. It is not a replacement for Supabase Auth and is not used when Supabase is configured.
 - RLS policies are applied to the live Supabase project and verified: every product table has four owner-scoped policies, and the private storage bucket has four owner policies. Continue to validate with two real test accounts whenever policies change.
 - The production demo account is intentionally seeded and uses a separate password supplied privately. Change or remove it before using the deployment for private data.
-- Supabase Auth site/redirect URL configuration remains a dashboard step: new-user confirmation and password-reset email links need the Vercel callback URL allow-listed.
+- Supabase Auth site/redirect URL configuration remains a dashboard step for password-reset email links.
+- `SUPABASE_SKIP_EMAIL_CONFIRMATION=true` is enabled on the live deployment because custom SMTP is not configured. Registration creates admin-confirmed users, so email ownership is **not** verified at signup. Disable this flag after configuring SMTP and email confirmation.
 - File uploads are capped at 4 MB because of the Vercel request-body limit. Larger files would need direct-to-storage signed uploads.
 - There is no user-facing activity audit log.
 - The app does not implement email verification itself; it relies on Supabase's configuration.

@@ -2,6 +2,7 @@
 
 import { createHash, randomBytes } from "node:crypto";
 import { headers } from "next/headers";
+import { createClient } from "@supabase/supabase-js";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
 
 import { getDb, isLocalMode } from "@/lib/db";
@@ -81,6 +82,47 @@ export async function registerAction(input: unknown): Promise<AuthActionResult> 
   if (isSupabaseAuthEnabled()) {
     const supabase = await createSupabaseServerClient();
     if (!supabase) return { ok: false, error: "Authentication is not configured." };
+
+    if (process.env.SUPABASE_SKIP_EMAIL_CONFIRMATION === "true") {
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!url || !serviceKey) {
+        return {
+          ok: false,
+          error: "Registration is not configured. The server is missing Supabase admin credentials.",
+        };
+      }
+
+      const admin = createClient(url, serviceKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const { error: createError } = await admin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { display_name: displayName, username },
+      });
+
+      if (createError) {
+        if (/already|registered|exists/i.test(createError.message)) {
+          return { ok: false, error: "An account with that email already exists. Sign in instead." };
+        }
+        if (createError.status === 429) {
+          return { ok: false, error: "Supabase is temporarily limiting auth requests. Try again shortly." };
+        }
+        return { ok: false, error: createError.message };
+      }
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) {
+        return {
+          ok: false,
+          error: "Your account was created, but automatic sign-in failed. Sign in with your credentials.",
+        };
+      }
+      return { ok: true };
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -89,7 +131,15 @@ export async function registerAction(input: unknown): Promise<AuthActionResult> 
         emailRedirectTo: await callbackUrl("/dashboard"),
       },
     });
-    if (error) return { ok: false, error: error.message };
+    if (error) {
+      if (error.status === 429 || /rate limit/i.test(error.message)) {
+        return {
+          ok: false,
+          error: "Email sending is temporarily limited by Supabase. Try again later or use another sign-in method.",
+        };
+      }
+      return { ok: false, error: error.message };
+    }
 
     if (!data.session) {
       return {

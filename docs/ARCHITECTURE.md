@@ -73,6 +73,8 @@ Browser → /login
 
 Registration uses `supabase.auth.signUp`. When email confirmation is enabled the user receives a link to `/callback`; the callback exchanges the code for a session and redirects to the requested route. Password reset uses `resetPasswordForEmail`, then `/callback` and `/reset-password`.
 
+When `SUPABASE_SKIP_EMAIL_CONFIRMATION=true` (used on the live deployment because custom SMTP is not configured), registration instead creates an already-confirmed user through `supabase.auth.admin.createUser`, then signs in with the new credentials. This avoids Supabase's default email rate limit. It should be disabled once SMTP and confirmation redirects are configured.
+
 ### Development: local provider
 
 ```text

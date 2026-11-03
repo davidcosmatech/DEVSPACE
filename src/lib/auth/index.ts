@@ -71,6 +71,14 @@ function uniqueUsername(base: string) {
   return `${cleaned || "developer"}_${Math.random().toString(36).slice(2, 6)}`.slice(0, 40);
 }
 
+function sanitizeUsername(base: string) {
+  const cleaned = base
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "")
+    .slice(0, 40);
+  return cleaned.length >= 3 ? cleaned : uniqueUsername(base);
+}
+
 async function ensureSupabaseProfile(input: {
   id: string;
   email: string;
@@ -85,7 +93,7 @@ async function ensureSupabaseProfile(input: {
   }
 
   const baseUsername = input.username || input.email.split("@")[0];
-  const username = uniqueUsername(baseUsername);
+  const username = sanitizeUsername(baseUsername);
   const [created] = await db
     .insert(profiles)
     .values({

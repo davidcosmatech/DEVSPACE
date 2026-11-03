@@ -92,6 +92,9 @@ npm run dev
    - `SUPABASE_SERVICE_ROLE_KEY` (server-only; storage and account administration)
    - `SESSION_SECRET` (at least 32 random characters)
    - `NEXT_PUBLIC_SITE_URL`
+   - `SUPABASE_SKIP_EMAIL_CONFIRMATION=true` (registration without SMTP; creates confirmed users through the Admin API)
+
+> With `SUPABASE_SKIP_EMAIL_CONFIRMATION=true`, new accounts are created confirmed, so registration is not blocked by Supabase's default email rate limit. Set it to `false` after configuring custom SMTP and the Auth URL configuration.
 
 > Supabase's direct database hostname is IPv6-only on some networks. If it is not resolvable, use the session pooler on port `5432` for `DIRECT_URL` (same credentials as the transaction pooler on `6543`). The live deployment uses this configuration.
 3. Apply the schema, RLS and storage policies:

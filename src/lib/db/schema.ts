@@ -65,6 +65,22 @@ export const passwordResets = pgTable(
   (table) => [uniqueIndex("password_resets_token_unique").on(table.tokenHash)],
 );
 
+export const workspaces = pgTable(
+  "workspaces",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 100 }).notNull(),
+    description: text("description").notNull().default(""),
+    category: varchar("category", { length: 60 }).notNull().default("General"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("workspaces_user_idx").on(table.userId)],
+);
+
 export const projects = pgTable(
   "projects",
   {
@@ -72,12 +88,16 @@ export const projects = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => profiles.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, {
+      onDelete: "set null",
+    }),
     name: varchar("name", { length: 120 }).notNull(),
     description: text("description").notNull().default(""),
     status: varchar("status", { length: 20 }).notNull().default("Planning"),
     technology: varchar("technology", { length: 120 }).notNull().default(""),
     repositoryUrl: text("repository_url"),
     priority: varchar("priority", { length: 10 }).notNull().default("medium"),
+    visibility: varchar("visibility", { length: 10 }).notNull().default("private"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -85,6 +105,8 @@ export const projects = pgTable(
     index("projects_user_idx").on(table.userId),
     index("projects_user_status_idx").on(table.userId, table.status),
     index("projects_user_updated_idx").on(table.userId, table.updatedAt),
+    index("projects_user_workspace_idx").on(table.userId, table.workspaceId),
+    index("projects_user_visibility_idx").on(table.userId, table.visibility),
   ],
 );
 
@@ -107,22 +129,6 @@ export const notes = pgTable(
     index("notes_user_updated_idx").on(table.userId, table.updatedAt),
     index("notes_user_pinned_idx").on(table.userId, table.isPinned),
   ],
-);
-
-export const workspaces = pgTable(
-  "workspaces",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => profiles.id, { onDelete: "cascade" }),
-    name: varchar("name", { length: 100 }).notNull(),
-    description: text("description").notNull().default(""),
-    category: varchar("category", { length: 60 }).notNull().default("General"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [index("workspaces_user_idx").on(table.userId)],
 );
 
 export const workspaceLinks = pgTable(

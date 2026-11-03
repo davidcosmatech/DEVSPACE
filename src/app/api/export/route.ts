@@ -62,6 +62,7 @@ export async function GET() {
       technology: project.technology,
       repositoryUrl: project.repositoryUrl,
       priority: project.priority,
+      visibility: project.visibility,
       createdAt: project.createdAt.toISOString(),
       updatedAt: project.updatedAt.toISOString(),
     })),

@@ -52,8 +52,26 @@ describe("project validation", () => {
       technology: "Next.js",
       repositoryUrl: "https://github.com/example/devspace",
       priority: "high",
+      visibility: "public",
+      workspaceId: "2f056e14-2f9e-4f2e-8e57-d1f4f3a64e9d",
     });
     expect(result.success).toBe(true);
+  });
+
+  it("accepts a private project with no workspace", () => {
+    const result = projectSchema.safeParse({
+      name: "Private project",
+      description: "",
+      status: "Planning",
+      technology: "",
+      priority: "medium",
+      visibility: "private",
+      workspaceId: "",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.workspaceId).toBe("");
+    }
   });
 
   it("rejects invalid status and repository protocols", () => {
@@ -65,6 +83,8 @@ describe("project validation", () => {
         technology: "",
         repositoryUrl: "javascript:alert(1)",
         priority: "high",
+        visibility: "private",
+        workspaceId: "",
       }).success,
     ).toBe(false);
   });

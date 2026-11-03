@@ -2,10 +2,13 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   CheckCircle2,
   Clock3,
   Download,
+  Eye,
   FileText,
   HardDrive,
   Loader2,
@@ -32,6 +35,13 @@ type UploadTarget = {
   description: string;
 };
 
+type FilePreview = {
+  file: TrackerFile;
+  loading: boolean;
+  content: string;
+  error: string | null;
+};
+
 export function TrackerView({ files }: { files: TrackerFile[] }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -42,6 +52,7 @@ export function TrackerView({ files }: { files: TrackerFile[] }) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [description, setDescription] = useState("");
+  const [preview, setPreview] = useState<FilePreview | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const uploaded = files.filter((file) => file.uploadStatus === "uploaded");
@@ -134,8 +145,36 @@ export function TrackerView({ files }: { files: TrackerFile[] }) {
       return;
     }
     toast.success("Tracked file deleted.");
+    if (preview?.file.id === deleting.id) setPreview(null);
     setDeleting(null);
     router.refresh();
+  }
+
+  async function openPreview(file: TrackerFile) {
+    if (file.uploadStatus !== "uploaded") {
+      setPreview({
+        file,
+        loading: false,
+        content: "",
+        error: "This tracked document does not have an uploaded file yet.",
+      });
+      return;
+    }
+
+    setPreview({ file, loading: true, content: "", error: null });
+    try {
+      const response = await fetch(`/api/tracker/${file.id}/content`, { cache: "no-store" });
+      const payload = (await response.json()) as { content?: string; error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "Could not open this file.");
+      setPreview({ file, loading: false, content: payload.content ?? "", error: null });
+    } catch (error) {
+      setPreview({
+        file,
+        loading: false,
+        content: "",
+        error: error instanceof Error ? error.message : "Could not open this file.",
+      });
+    }
   }
 
   return (
@@ -220,6 +259,66 @@ export function TrackerView({ files }: { files: TrackerFile[] }) {
         </span>
       </div>
 
+      {preview ? (
+        <section className="file-preview-panel" aria-live="polite">
+          <header className="file-preview-head">
+            <span className="file-icon">
+              <FileText size={17} />
+            </span>
+            <div className="file-preview-copy">
+              <h2>{preview.file.filename}</h2>
+              <p>
+                {preview.file.description || "No description"} ·{" "}
+                {preview.file.fileSize ? formatBytes(preview.file.fileSize) : "Not uploaded"}
+              </p>
+            </div>
+            {preview.file.uploadStatus === "uploaded" ? (
+              <a
+                href={`/api/tracker/${preview.file.id}/download`}
+                className="btn btn-secondary btn-sm"
+                aria-label={`Download ${preview.file.filename}`}
+              >
+                <Download size={13} /> Download
+              </a>
+            ) : null}
+            <button
+              type="button"
+              className="icon-button"
+              onClick={() => setPreview(null)}
+              aria-label="Close file preview"
+            >
+              <X size={16} />
+            </button>
+          </header>
+          <div className="file-preview-body">
+            {preview.loading ? (
+              <div className="file-preview-loading">
+                <Loader2 size={18} className="animate-spin" /> Loading document…
+              </div>
+            ) : preview.error ? (
+              <div className="file-preview-error">{preview.error}</div>
+            ) : preview.content.trim() ? (
+              <div className="markdown">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    a: ({ href, children }) => (
+                      <a href={href} target="_blank" rel="noreferrer noopener">
+                        {children}
+                      </a>
+                    ),
+                  }}
+                >
+                  {preview.content}
+                </ReactMarkdown>
+              </div>
+            ) : (
+              <div className="file-preview-error">This document is empty.</div>
+            )}
+          </div>
+        </section>
+      ) : null}
+
       {filtered.length === 0 ? (
         <div className="data-panel">
           <div className="empty-state">
@@ -256,7 +355,15 @@ export function TrackerView({ files }: { files: TrackerFile[] }) {
                   <FileText size={16} />
                 </span>
                 <div style={{ minWidth: 0 }}>
-                  <div className="file-name">{file.filename}</div>
+                  <button
+                    type="button"
+                    className="file-name file-name-button"
+                    onClick={() => openPreview(file)}
+                    title={`Preview ${file.filename}`}
+                  >
+                    <Eye size={12} />
+                    {file.filename}
+                  </button>
                   <div className="file-desc">
                     {file.uploadStatus === "uploaded"
                       ? `Stored privately · ${formatBytes(file.fileSize)}`

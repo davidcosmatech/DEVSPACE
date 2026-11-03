@@ -190,13 +190,13 @@ After deployment:
 | Production URL | https://devspace-ruby.vercel.app |
 | Vercel project | `devspace` / `davidcosmatechs-projects` |
 | GitHub branch | `devspace-3.0` in `davidcosmatech/DEVSPACE` |
-| Supabase migrations | `0000_init`, `0001_github_cache` applied |
+| Supabase migrations | `0000_init`, `0001_github_cache`, `0002_project_workspaces_visibility` applied |
 | RLS | Enabled on all nine public tables; 4 policies per product table |
 | Storage | Private `markdown-files` bucket, 4 MB limit, 4 owner policies |
 | Auth | Supabase Auth; demo account provisioned and confirmed |
 | Registration | `SUPABASE_SKIP_EMAIL_CONFIRMATION=true`; admin-confirmed signup avoids Supabase's default email rate limit |
 | Demo workspace | 5 projects, 12 notes, 3 workspaces, 10 tracker records, 8 real uploaded files |
-| Production verification | Login, project CRUD, Storage upload/download/delete, all pages, theme, export — passed with zero console errors |
+| Production verification | Login, project CRUD, public/private sections, bulk project updates, workspace assignment, header chat assistant, inline tracker preview, Storage upload/download/delete, all pages, theme and export — passed with zero console errors |
 
 ### Remaining dashboard step
 
@@ -225,9 +225,9 @@ GitHub `main` still contains the previous static prototype. The full application
 
 - `npm run typecheck` — passed.
 - `npm run lint` — passed.
-- `npm test` — 19/19 tests passed.
+- `npm test` — 20/20 tests passed.
 - `npm run test:e2e` — 9/9 Playwright flows passed locally.
 - `npm run build` — passed (Next.js 16.4.5).
 - Supabase-mode browser test — login, project CRUD, note autosave/reload, workspace/link CRUD, private Storage upload/download/delete, theme persistence and export passed.
-- Production browser test — the same critical flows passed against `https://devspace-ruby.vercel.app` with zero console errors.
+- Production browser test — login, project/workspace CRUD, public/private sections, multi-select bulk updates, chat assistant, inline Markdown preview, Storage upload/download/delete, theme persistence and export passed against `https://devspace-ruby.vercel.app` with zero console errors.
 - Database verification — 9 tables, RLS enabled, 28 product-table policies, 4 storage policies, 1 auth user, 1 profile and 10 tracker records.

@@ -187,6 +187,7 @@ export async function POST(request: Request) {
             technology: project.technology,
             repositoryUrl: project.repositoryUrl ?? null,
             priority: project.priority,
+            visibility: project.visibility,
             createdAt: project.createdAt ? new Date(project.createdAt) : new Date(),
             updatedAt: project.updatedAt ? new Date(project.updatedAt) : new Date(),
           })),

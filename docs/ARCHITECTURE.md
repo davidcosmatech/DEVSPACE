@@ -35,6 +35,9 @@ Server Actions in `src/features/*/actions.ts` and route handlers in `src/app/api
 
 - Authentication and session lifecycle.
 - Project, note, workspace, link and tracker CRUD.
+- Public/private project sections, workspace assignment and bulk project updates.
+- Header workspace assistant, powered by read-only queries over the current user's data.
+- Inline Markdown preview for tracked files.
 - GitHub username configuration.
 - Theme/locale preferences.
 - Backup export and import.
@@ -118,6 +121,16 @@ Browser (XHR upload progress)
 
 Files are private. Download goes through `/api/tracker/[id]/download`, which rechecks ownership. Imported tracker rows intentionally import as `pending` with no storage path, because a metadata record is not an uploaded file.
 
+Clicking a filename in the tracker calls `/api/tracker/[id]/content`, which rechecks ownership, reads the stored Markdown and renders it in an inline preview panel on the same page.
+
+## Workspace assistant
+
+The header chat button opens a read-only assistant. `POST /api/assistant` validates the session and answers questions about project counts, public/private projects, workspaces, notes, tracked files and GitHub status. It uses only the signed-in user's records; no external AI service or credentials are involved.
+
+## Project workspaces and visibility
+
+`projects.visibility` is `public` or `private`. `projects.workspace_id` optionally links a project to one of the user's Browser Workspaces. The projects page renders a Public section followed by a Private section, supports filtering by workspace, and allows multi-select bulk updates of visibility or workspace assignment.
+
 ## Backup and restore
 
 Export produces a stable, versioned JSON document (`app`, `schemaVersion: 1`, `exportedAt`). IDs and storage paths are excluded.
@@ -161,6 +174,7 @@ Server Actions give a compact, type-safe mutation path with built-in same-origin
 | `lib/validation` | Shared client/server schemas |
 | `lib/storage` | Private local/Supabase file operations |
 | `lib/github` | Public GitHub REST client and error classification |
+| `app/api/assistant` | Read-only workspace chat answers |
 | `features/*/actions.ts` | Authorized mutations |
 | `features/*/*-view.tsx` | Interactive UI |
 | `app/api` | Search, backup, import, upload, download |

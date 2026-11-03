@@ -11,16 +11,17 @@ DEVSPACE is a working Next.js application — not a static dashboard mock-up. Ev
 ## What is included
 
 - **Authentication** — registration, email/password sign-in, sign-out, password reset, protected routes and session handling. Supabase Auth in production; a secure local provider for development.
-- **Projects** — full CRUD, search, status and technology filters, priorities, repository links, list and grid views.
+- **Projects** — full CRUD, public/private sections, workspace grouping, multi-select bulk editing, search, status/technology/workspace filters, priorities, repository links, list and grid views.
 - **Notes** — Markdown editor and preview, autosave with unsaved-change protection, pinning, categories, search and deletion.
 - **GitHub** — live public profile and repository data from the GitHub REST API, with a per-user verified snapshot fallback, plus loading, empty, not-found, rate-limit and network-failure states.
-- **Browser Workspaces** — workspace CRUD and nested link CRUD with URL validation, categories and safe external links.
-- **Markdown Tracker** — real file uploads with byte-level progress, private per-user storage, download, pending records and deletion.
+- **Browser Workspaces** — workspace CRUD and nested link CRUD with URL validation, categories, safe external links and linked project counts.
+- **Markdown Tracker** — real file uploads with byte-level progress, private per-user storage, inline Markdown preview, download, pending records and deletion.
+- **Workspace chat** — a header chat assistant that answers questions from the signed-in user's real projects, notes, workspaces, files and GitHub status.
 - **Settings** — profile and avatar management, persistent dark/light themes, locale preference, JSON export, safe import preview and account deletion.
 - **Backup & restore** — versioned JSON format, duplicate detection, no cross-account overwrite, transactional import.
 - **Responsive design** — fixed desktop sidebar, drawer navigation on mobile, single-column cards, responsive tables and touch-friendly controls.
 - **Security** — server-derived ownership on every query, Zod validation, secure HttpOnly sessions, RLS policies for Supabase and private file storage.
-- **Quality gates** — TypeScript, ESLint, 19 unit/integration tests, 9 Playwright end-to-end tests and a production build.
+- **Quality gates** — TypeScript, ESLint, 20 unit/integration tests, 9 Playwright end-to-end tests and a production build.
 
 ## Demo
 
@@ -138,13 +139,13 @@ src/
 ├── app/
 │   ├── (auth)/                 login, register, reset, callback
 │   ├── (workspace)/            dashboard, projects, notes, github, workspaces, tracker, settings
-│   ├── api/                    search, export, import, tracker upload/download
+│   ├── api/                    search, assistant, export, import, tracker content/upload/download
 │   ├── globals.css             design system and responsive layouts
 │   └── layout.tsx
 ├── components/
 │   ├── dashboard/              banner art
 │   ├── icons/                  GitHub brand mark
-│   ├── layout/                 app shell, sidebar, header, command palette
+│   ├── layout/                 app shell, sidebar, header, command palette, chat
 │   └── ui/                     modal, badges, avatar, page header, confirmation
 ├── features/
 │   ├── auth/                   actions and forms
@@ -178,6 +179,14 @@ The dashboard geometry is tuned to the supplied **1672 × 941** reference (280 p
 Dark and light themes share the same token system in `src/app/globals.css`. Motion is restrained and respects `prefers-reduced-motion`.
 
 ### Screens
+
+| Projects — public & private | Chat assistant |
+|---|---|
+| ![Project sections](docs/screenshots/projects-sections.png) | ![Chat assistant](docs/screenshots/chat-assistant.png) |
+
+| Markdown preview | Workspaces with projects |
+|---|---|
+| ![Markdown preview](docs/screenshots/tracker-preview.png) | ![Workspaces](docs/screenshots/workspaces-projects.png) |
 
 | Projects | Notes |
 |---|---|

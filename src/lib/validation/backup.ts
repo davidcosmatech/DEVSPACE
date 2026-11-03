@@ -23,6 +23,7 @@ export const backupProjectSchema = z.object({
       }
     }, "Repository URL must use http(s)."),
   priority: z.enum(projectPriorities).default("medium"),
+  visibility: z.enum(["public", "private"]).default("private"),
   createdAt: dateString.optional(),
   updatedAt: dateString.optional(),
 });

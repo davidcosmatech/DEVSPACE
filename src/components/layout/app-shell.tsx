@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  MessageCircle,
   Moon,
   Rocket,
   Search,
@@ -26,6 +27,7 @@ import {
 import { BrandLockup } from "@/components/brand";
 import { Github } from "@/components/icons/github";
 import { BrowserWorkspaceIcon, TrackerIcon } from "@/components/icons/nav-icons";
+import { ChatPanel } from "@/components/layout/chat-panel";
 import { Avatar } from "@/components/ui/avatar";
 import { useTheme } from "@/components/theme-provider";
 import { logoutAction } from "@/features/auth/actions";
@@ -184,11 +186,13 @@ function Header({
 }) {
   const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const bellRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
+  const closeChat = useCallback(() => setChatOpen(false), []);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -233,10 +237,28 @@ function Header({
           <Menu size={20} />
         </button>
 
-        <button type="button" className="search-trigger" onClick={() => setSearchOpen(true)}>
+        <button
+          type="button"
+          className="search-trigger"
+          onClick={() => {
+            setSearchOpen(true);
+            setChatOpen(false);
+          }}
+        >
           <Search size={17} />
           <span>Search projects, notes, or anything…</span>
           <span className="search-kbd">Ctrl + K</span>
+        </button>
+
+        <button
+          type="button"
+          className={cn("chat-trigger", chatOpen && "active")}
+          onClick={() => setChatOpen((current) => !current)}
+          aria-expanded={chatOpen}
+          aria-label="Open workspace chat"
+        >
+          <MessageCircle size={17} />
+          <span>Chat</span>
         </button>
 
         <div className="topbar-right">
@@ -377,6 +399,7 @@ function Header({
       </header>
 
       {searchOpen ? <CommandPalette onClose={() => setSearchOpen(false)} /> : null}
+      {chatOpen ? <ChatPanel viewerName={viewer.displayName} onClose={closeChat} /> : null}
     </>
   );
 }

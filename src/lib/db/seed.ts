@@ -73,6 +73,7 @@ const projectSeed = [
     technology: "Next.js",
     repositoryUrl: "https://github.com/davidcosmatech",
     priority: "high",
+    visibility: "public",
     createdAt: ago(35),
     updatedAt: ago(0, 3),
   },
@@ -83,6 +84,7 @@ const projectSeed = [
     technology: "React",
     repositoryUrl: null,
     priority: "medium",
+    visibility: "private",
     createdAt: ago(18),
     updatedAt: ago(1, 2),
   },
@@ -93,6 +95,7 @@ const projectSeed = [
     technology: "TypeScript",
     repositoryUrl: null,
     priority: "medium",
+    visibility: "public",
     createdAt: ago(12),
     updatedAt: ago(2, 1),
   },
@@ -103,6 +106,7 @@ const projectSeed = [
     technology: "Next.js",
     repositoryUrl: null,
     priority: "low",
+    visibility: "public",
     createdAt: ago(60),
     updatedAt: ago(3),
   },
@@ -113,10 +117,19 @@ const projectSeed = [
     technology: "Python",
     repositoryUrl: null,
     priority: "low",
+    visibility: "private",
     createdAt: ago(90),
     updatedAt: ago(4),
   },
 ];
+
+const projectWorkspace: Record<string, string> = {
+  DEVSPACE: "Frontend Development",
+  StudyFlow: "Learning",
+  "Todo App": "Frontend Development",
+  "Portfolio Website": "Design & Inspiration",
+  "Python Tools": "Learning",
+};
 
 const noteSeed = [
   {
@@ -591,8 +604,9 @@ export async function seedLocalWorkspace(db: AppDatabase) {
       updatedAt: ago(3),
     });
 
-    await tx.insert(projects).values(projectSeed.map((project) => ({ ...project, userId })));
     await tx.insert(notes).values(noteSeed.map((note) => ({ ...note, userId })));
+
+    const workspaceIdsByName: Record<string, string> = {};
 
     for (const workspace of workspaceSeed) {
       const [created] = await tx
@@ -606,6 +620,7 @@ export async function seedLocalWorkspace(db: AppDatabase) {
           updatedAt: ago(2),
         })
         .returning({ id: workspaces.id });
+      workspaceIdsByName[workspace.name] = created.id;
 
       await tx.insert(workspaceLinks).values(
         workspace.links.map((link) => ({
@@ -618,6 +633,14 @@ export async function seedLocalWorkspace(db: AppDatabase) {
         })),
       );
     }
+
+    await tx.insert(projects).values(
+      projectSeed.map((project) => ({
+        ...project,
+        userId,
+        workspaceId: workspaceIdsByName[projectWorkspace[project.name]] ?? null,
+      })),
+    );
 
     await tx.insert(trackerFiles).values(trackerRows);
   });

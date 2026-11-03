@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ExternalLink,
+  FolderKanban,
   FolderOpen,
   Globe2,
   Pencil,
@@ -35,7 +37,10 @@ import {
 } from "@/lib/validation/workspace";
 import { cn, normalizeUrl } from "@/lib/utils";
 
-export type WorkspaceWithLinks = Workspace & { links: WorkspaceLink[] };
+export type WorkspaceWithLinks = Workspace & {
+  links: WorkspaceLink[];
+  projects: { id: string; name: string; status: string }[];
+};
 
 export function WorkspacesView({ workspaces }: { workspaces: WorkspaceWithLinks[] }) {
   const router = useRouter();
@@ -174,7 +179,10 @@ export function WorkspacesView({ workspaces }: { workspaces: WorkspaceWithLinks[
                   </span>
                   <div className="workspace-title">
                     <h3>{workspace.name}</h3>
-                    <p>{workspace.category}</p>
+                    <p>
+                      {workspace.category} · {workspace.projects.length}{" "}
+                      {workspace.projects.length === 1 ? "project" : "projects"}
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -197,6 +205,17 @@ export function WorkspacesView({ workspaces }: { workspaces: WorkspaceWithLinks[
                 <p className="workspace-desc">
                   {workspace.description || "No description. Add a short note about this workspace."}
                 </p>
+                <div className="meta-row" style={{ marginTop: 12 }}>
+                  <Link
+                    href={`/projects?workspace=${workspace.id}`}
+                    className="badge badge-slate"
+                    style={{ textDecoration: "none" }}
+                  >
+                    <FolderKanban size={11} />
+                    {workspace.projects.length}{" "}
+                    {workspace.projects.length === 1 ? "project" : "projects"}
+                  </Link>
+                </div>
               </div>
 
               <div className="link-list">

@@ -2,6 +2,8 @@
 
 **Your personal developer workspace.** A multi-user workspace for projects, notes, GitHub profiles, browser workspaces, Markdown files and data backup.
 
+**Live production:** [https://devspace-ruby.vercel.app](https://devspace-ruby.vercel.app)
+
 DEVSPACE is a working Next.js application — not a static dashboard mock-up. Every card, counter, list and progress bar on the dashboard is backed by real database records, and every action is implemented end to end.
 
 ![DEVSPACE dashboard](docs/screenshots/dashboard.png)
@@ -29,7 +31,7 @@ Email:    demo@devspace.app
 Password: Devspace123!
 ```
 
-The demo account is created **only** by the local PGlite provider. It is not created when Supabase credentials are configured.
+The hosted preview has its own seeded demo account with a separate password that is not stored in this repository. The local demo account is created only by the PGlite provider.
 
 ## Technology
 
@@ -86,10 +88,12 @@ npm run dev
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
    - `DATABASE_URL` (pooled connection)
-   - `DIRECT_URL` (direct connection for migrations)
+   - `DIRECT_URL` (migration/session connection)
    - `SUPABASE_SERVICE_ROLE_KEY` (server-only; storage and account administration)
    - `SESSION_SECRET` (at least 32 random characters)
    - `NEXT_PUBLIC_SITE_URL`
+
+> Supabase's direct database hostname is IPv6-only on some networks. If it is not resolvable, use the session pooler on port `5432` for `DIRECT_URL` (same credentials as the transaction pooler on `6543`). The live deployment uses this configuration.
 3. Apply the schema, RLS and storage policies:
 
 ```bash
@@ -204,7 +208,14 @@ The Playwright suite uses the locally installed Chrome channel by default. To us
 
 ## Deployment status
 
-This repository is ready for production deployment but has **not** been deployed from this environment because no Supabase project, Vercel token or GitHub remote credentials were available. No credentials are fabricated. See the final section of [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the exact remaining steps and required access.
+**Deployed and verified** on Vercel:
+
+- Production URL: [https://devspace-ruby.vercel.app](https://devspace-ruby.vercel.app)
+- Supabase migrations, RLS policies and the private `markdown-files` bucket are applied.
+- Authentication, project/note/workspace CRUD, tracker upload/download, theme persistence and JSON export were verified against the production deployment.
+- GitHub branch: `devspace-3.0` in `davidcosmatech/DEVSPACE`. The existing `main` branch is untouched.
+
+One dashboard-only step remains for new user registration and password reset emails: in **Supabase → Authentication → URL Configuration**, set the Site URL to `https://devspace-ruby.vercel.app` and allow `https://devspace-ruby.vercel.app/callback` and `http://localhost:3000/callback`. The seeded demo account works without it. Details are in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Documentation
 

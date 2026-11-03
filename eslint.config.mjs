@@ -13,5 +13,6 @@ export default defineConfig([
     "drizzle/**",
     "playwright-report/**",
     "test-results/**",
+    ".tmp/**",
   ]),
 ]);

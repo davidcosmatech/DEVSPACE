@@ -9,6 +9,8 @@
 
 The same Drizzle schema and SQL dialect are used in both modes. PGlite is not intended for serverless production.
 
+The live Supabase project uses the transaction pooler (`6543`) for `DATABASE_URL` and the session pooler (`5432`) for `DIRECT_URL`, because the direct `db.<ref>.supabase.co` hostname is IPv6-only and was not resolvable from the deployment environment.
+
 ## Tables
 
 ### `profiles`

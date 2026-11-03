@@ -1,6 +1,6 @@
 # Deployment
 
-DEVSPACE 3.0 is designed for Vercel + Supabase. The repository currently runs locally with the PGlite fallback. A production deployment requires accounts and credentials that were not available in this environment.
+DEVSPACE 3.0 is live on Vercel with Supabase PostgreSQL, Supabase Auth and private Supabase Storage. The repository also runs locally with the PGlite fallback.
 
 ---
 
@@ -32,6 +32,8 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
    - Direct connection string (port 5432) → `DIRECT_URL`
 
 Use the direct URL for migrations and RLS. The application uses `prepare: false` for compatibility with the Supabase transaction pooler.
+
+> Supabase's direct hostname (`db.<ref>.supabase.co`) is IPv6-only for some projects and may fail with `ENOTFOUND` on IPv4-only networks. In that case, use the session pooler on port `5432` for `DIRECT_URL` with the same project credentials. The live deployment uses the session pooler.
 
 ---
 
@@ -181,20 +183,50 @@ After deployment:
 
 ## 8. Current deployment status
 
-**Not deployed.** This environment did not contain:
+**Deployed and verified.**
 
-- Supabase project URL/key or database connection strings.
-- A Vercel account token or logged-in CLI.
-- A GitHub remote or authentication token.
-- Permission to create paid or external resources.
+| Item | Value |
+|---|---|
+| Production URL | https://devspace-ruby.vercel.app |
+| Vercel project | `devspace` / `davidcosmatechs-projects` |
+| GitHub branch | `devspace-3.0` in `davidcosmatech/DEVSPACE` |
+| Supabase migrations | `0000_init`, `0001_github_cache` applied |
+| RLS | Enabled on all eight public tables; 4 policies per product table |
+| Storage | Private `markdown-files` bucket, 4 MB limit, 4 owner policies |
+| Auth | Supabase Auth; demo account provisioned and confirmed |
+| Demo workspace | 5 projects, 12 notes, 3 workspaces, 10 tracker records, 8 real uploaded files |
+| Production verification | Login, project CRUD, Storage upload/download/delete, all pages, theme, export — passed with zero console errors |
 
-The application was fully built, tested locally, and verified in Chrome. To complete deployment, provide the prerequisites above or run the steps in this document with your accounts. No credentials were fabricated and no deployment URL is claimed.
+### Remaining dashboard step
 
-Local verification performed:
+New-user confirmation and password-reset emails still require Supabase URL configuration. In **Supabase → Authentication → URL Configuration**:
+
+- Site URL: `https://devspace-ruby.vercel.app`
+- Redirect URLs:
+  - `https://devspace-ruby.vercel.app/callback`
+  - `http://localhost:3000/callback`
+
+This cannot be changed with the service-role key; the Supabase Management API requires a personal access token. The seeded demo account works without this step. For reliable production email delivery, configure custom SMTP in Supabase as well.
+
+### Future deployments
+
+The Vercel project is not currently connected to Git, so production deploys are explicit:
+
+```bash
+npx vercel@latest deploy --prod --yes
+```
+
+Environment variables are already stored in the Vercel project. A future Git connection should use the `devspace-3.0` branch as the production branch unless the existing `main` branch is intentionally replaced.
+
+GitHub `main` still contains the previous static prototype. The full application is isolated on `devspace-3.0`; nothing was force-pushed or overwritten.
+
+### Verification evidence
 
 - `npm run typecheck` — passed.
 - `npm run lint` — passed.
 - `npm test` — 19/19 tests passed.
-- `npm run test:e2e` — 9/9 Playwright flows passed in a single run.
-- `npm run build` — passed (Next.js 16.4.5 production build, all routes compiled).
-- Browser smoke test — all seven workspace pages, CRUD flows, theme persistence, search, import/export, registration, password reset and account deletion verified in Chrome.
+- `npm run test:e2e` — 9/9 Playwright flows passed locally.
+- `npm run build` — passed (Next.js 16.4.5).
+- Supabase-mode browser test — login, project CRUD, note autosave/reload, workspace/link CRUD, private Storage upload/download/delete, theme persistence and export passed.
+- Production browser test — the same critical flows passed against `https://devspace-ruby.vercel.app` with zero console errors.
+- Database verification — 8 tables, RLS enabled, 32 product-table policies, 4 storage policies, 1 auth user, 1 profile and 10 tracker records.

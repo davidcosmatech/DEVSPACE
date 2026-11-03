@@ -191,7 +191,7 @@ After deployment:
 | Vercel project | `devspace` / `davidcosmatechs-projects` |
 | GitHub branch | `devspace-3.0` in `davidcosmatech/DEVSPACE` |
 | Supabase migrations | `0000_init`, `0001_github_cache` applied |
-| RLS | Enabled on all eight public tables; 4 policies per product table |
+| RLS | Enabled on all nine public tables; 4 policies per product table |
 | Storage | Private `markdown-files` bucket, 4 MB limit, 4 owner policies |
 | Auth | Supabase Auth; demo account provisioned and confirmed |
 | Demo workspace | 5 projects, 12 notes, 3 workspaces, 10 tracker records, 8 real uploaded files |
@@ -229,4 +229,4 @@ GitHub `main` still contains the previous static prototype. The full application
 - `npm run build` — passed (Next.js 16.4.5).
 - Supabase-mode browser test — login, project CRUD, note autosave/reload, workspace/link CRUD, private Storage upload/download/delete, theme persistence and export passed.
 - Production browser test — the same critical flows passed against `https://devspace-ruby.vercel.app` with zero console errors.
-- Database verification — 8 tables, RLS enabled, 32 product-table policies, 4 storage policies, 1 auth user, 1 profile and 10 tracker records.
+- Database verification — 9 tables, RLS enabled, 28 product-table policies, 4 storage policies, 1 auth user, 1 profile and 10 tracker records.

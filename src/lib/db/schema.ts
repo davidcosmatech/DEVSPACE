@@ -12,6 +12,26 @@ import {
 } from "drizzle-orm/pg-core";
 
 /**
+ * Role definitions. System roles are seeded by the migration; custom roles are
+ * created from the admin console. Permissions are validated server-side against
+ * the canonical permission keys in `src/lib/rbac.ts`.
+ */
+export const roles = pgTable(
+  "roles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    key: varchar("key", { length: 40 }).notNull(),
+    name: varchar("name", { length: 60 }).notNull(),
+    description: text("description").notNull().default(""),
+    permissions: jsonb("permissions").$type<string[]>().notNull().default([]),
+    isSystem: boolean("is_system").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("roles_key_unique").on(table.key)],
+);
+
+/**
  * User profile. `id` matches `auth.users.id` in Supabase. In the local
  * development provider it matches the id in `local_accounts`.
  */
@@ -24,7 +44,7 @@ export const profiles = pgTable(
     avatarUrl: text("avatar_url"),
     bio: text("bio").notNull().default(""),
     email: varchar("email", { length: 254 }),
-    role: varchar("role", { length: 12 }).notNull().default("user"),
+    role: varchar("role", { length: 40 }).notNull().default("member"),
     status: varchar("status", { length: 12 }).notNull().default("active"),
     lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
     githubUsername: varchar("github_username", { length: 39 }),
@@ -200,8 +220,30 @@ export const tickets = pgTable(
   ],
 );
 
-export const userSettings = pgTable("user_settings",
+/**
+ * Append-only administrative audit trail for role, status and permission
+ * changes. Actor details are snapshotted so the log survives user deletion.
+ */
+export const auditLogs = pgTable(
+  "audit_logs",
   {
+    id: uuid("id").primaryKey().defaultRandom(),
+    actorId: uuid("actor_id").references(() => profiles.id, { onDelete: "set null" }),
+    actorEmail: varchar("actor_email", { length: 254 }),
+    action: varchar("action", { length: 60 }).notNull(),
+    targetType: varchar("target_type", { length: 30 }).notNull(),
+    targetId: varchar("target_id", { length: 64 }),
+    details: jsonb("details").$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("audit_logs_actor_idx").on(table.actorId),
+    index("audit_logs_target_idx").on(table.targetType, table.targetId),
+    index("audit_logs_created_idx").on(table.createdAt),
+  ],
+);
+
+export const userSettings = pgTable("user_settings",  {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: uuid("user_id")
       .notNull()
@@ -226,3 +268,6 @@ export type WorkspaceLink = typeof workspaceLinks.$inferSelect;
 export type TrackerFile = typeof trackerFiles.$inferSelect;
 export type Ticket = typeof tickets.$inferSelect;
 export type UserSettings = typeof userSettings.$inferSelect;
+
+export type Role = typeof roles.$inferSelect;
+export type AuditLog = typeof auditLogs.$inferSelect;

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 
 import { getViewer } from "@/lib/auth";
+import { viewerHasPermission } from "@/lib/auth/rbac";
 import { getDb } from "@/lib/db";
 import { trackerFiles } from "@/lib/db/schema";
 import { deleteStoredFile, saveFile } from "@/lib/storage";
@@ -12,6 +13,9 @@ const ALLOWED_EXTENSIONS = [".md", ".markdown", ".mdx", ".txt"];
 export async function POST(request: Request) {
   const viewer = await getViewer();
   if (!viewer) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await viewerHasPermission(viewer, "content.manage"))) {
+    return NextResponse.json({ error: "You do not have permission to upload files." }, { status: 403 });
+  }
   let formData: FormData;
 
   try {
@@ -103,3 +107,4 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ ok: true });
 }
+

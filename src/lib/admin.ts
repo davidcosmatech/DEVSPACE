@@ -34,8 +34,10 @@ export const ticketPriorityLabels: Record<TicketPriority, string> = {
  * email or environment allow-list: only `profiles.role = 'admin'` grants access
  * to the admin console.
  */
+const staffRoles = new Set(["owner", "admin", "moderator"]);
+
 export function isAdminUser(user: { role?: string | null }) {
-  return (user.role ?? "").trim().toLowerCase() === "admin";
+  return staffRoles.has((user.role ?? "").trim().toLowerCase());
 }
 
 export function userStatusLabel(status: string | null | undefined) {
@@ -99,3 +101,4 @@ export function summarizeTicketQueue(tickets: Array<{ status: string | null | un
   const awaiting = counts.open + counts.in_progress;
   return { ...counts, awaiting, total: tickets.length };
 }
+

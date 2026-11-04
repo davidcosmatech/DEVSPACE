@@ -1,15 +1,20 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Activity,
+  ArrowLeft,
+  ArrowRight,
   ArrowUpRight,
   Check,
   Inbox,
+  KeyRound,
   LifeBuoy,
   Loader2,
+  Pencil,
+  Plus,
   Search,
   ShieldCheck,
   Trash2,
@@ -20,22 +25,36 @@ import {
 import { toast } from "sonner";
 
 import { Avatar } from "@/components/ui/avatar";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Modal } from "@/components/ui/modal";
 import { PageHeader } from "@/components/ui/page-header";
 import {
+  createRoleAction,
+  deleteRoleAction,
   deleteTicketAction,
   deleteUserAction,
   replyTicketAction,
   setUserRoleAction,
   setUserStatusAction,
+  updateRoleAction,
+  updateUserProfileAction,
 } from "@/features/admin/actions";
 import type {
   AdminOverview,
   AdminTicketRow,
+  AdminUserDetail,
   AdminUserRow,
+  AuditLogRow,
+  RoleRow,
   TicketFilter,
-  UserFilter,
+  UserSort,
+  ActivityFilter,
 } from "@/features/admin/queries";
+import {
+  hasPermission,
+  permissionDefinitions,
+  type PermissionKey,
+} from "@/lib/rbac";
 import {
   ticketPriorityLabels,
   ticketStatusLabels,
@@ -45,27 +64,13 @@ import {
 } from "@/lib/admin";
 import { cn, formatDate, formatDateTime, relativeTime } from "@/lib/utils";
 
-type AdminTab = "overview" | "users" | "tickets";
+type AdminTab = "overview" | "users" | "roles" | "tickets";
 
-const tabs: Array<{ id: AdminTab; label: string }> = [
+const tabs: Array<{ id: AdminTab; label: string; permission?: PermissionKey }> = [
   { id: "overview", label: "Overview" },
-  { id: "users", label: "People" },
-  { id: "tickets", label: "Tickets" },
-];
-
-const userFilters: Array<{ id: UserFilter; label: string }> = [
-  { id: "all", label: "All" },
-  { id: "active", label: "Active" },
-  { id: "suspended", label: "Suspended" },
-  { id: "admins", label: "Admins" },
-];
-
-const ticketFilters: Array<{ id: TicketFilter; label: string }> = [
-  { id: "all", label: "All" },
-  { id: "open", label: "Open" },
-  { id: "in_progress", label: "In progress" },
-  { id: "resolved", label: "Resolved" },
-  { id: "closed", label: "Closed" },
+  { id: "users", label: "People", permission: "users.manage" },
+  { id: "roles", label: "Roles", permission: "roles.manage" },
+  { id: "tickets", label: "Tickets", permission: "support.manage" },
 ];
 
 function statusBadgeClass(status: string) {
@@ -83,36 +88,83 @@ function priorityBadgeClass(priority: string) {
 }
 
 export function AdminView({
-  adminName,
+  actorId,
+  actorName,
+  actorRoleName,
+  actorRoleKey,
+  permissions,
   tab,
   overview,
   users,
+  filters,
+  roles,
   tickets,
   queue,
-  userFilter,
   ticketFilter,
+  detail,
+  audit,
 }: {
-  adminName: string;
+  actorId: string;
+  actorName: string;
+  actorRoleName: string;
+  actorRoleKey: string;
+  permissions: PermissionKey[];
   tab: AdminTab;
   overview: AdminOverview;
-  users: AdminUserRow[];
+  users: { rows: AdminUserRow[]; total: number; page: number; pageSize: number; pageCount: number };
+  filters: { q: string; role: string; status: string; activity: ActivityFilter; sort: UserSort };
+  roles: RoleRow[];
   tickets: AdminTicketRow[];
   queue: { open: number; in_progress: number; resolved: number; closed: number; awaiting: number; total: number };
-  userFilter: UserFilter;
   ticketFilter: TicketFilter;
+  detail: AdminUserDetail | null;
+  audit: AuditLogRow[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [search, setSearch] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<AdminUserRow | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [deleteTicketTarget, setDeleteTicketTarget] = useState<AdminTicketRow | null>(null);
   const [activeTicket, setActiveTicket] = useState<AdminTicketRow | null>(null);
   const [reply, setReply] = useState("");
   const [replyStatus, setReplyStatus] = useState<TicketStatus>("in_progress");
-  const [saving, setSaving] = useState(false);
+  const [roleEditor, setRoleEditor] = useState<{
+    mode: "create" | "edit";
+    key?: string;
+    name: string;
+    description: string;
+    permissions: PermissionKey[];
+  } | null>(null);
+  const [deleteRoleTarget, setDeleteRoleTarget] = useState<RoleRow | null>(null);
+  const [newRoleKey, setNewRoleKey] = useState("");
+
+  const canManageUsers = hasPermission({ key: "", permissions }, "users.manage");
+  const canManageRoles = hasPermission({ key: "", permissions }, "roles.manage");
+  const canManageSupport = hasPermission({ key: "", permissions }, "support.manage");
+
+  const activeUsers = overview.usage.total - overview.usage.suspended;
 
   function refresh() {
     startTransition(() => router.refresh());
+  }
+
+  const filterParams = useMemo(() => {
+    const params = new URLSearchParams();
+    if (filters.q) params.set("q", filters.q);
+    if (filters.role !== "all") params.set("role", filters.role);
+    if (filters.status !== "all") params.set("status", filters.status);
+    if (filters.activity !== "all") params.set("activity", filters.activity);
+    if (filters.sort !== "newest") params.set("sort", filters.sort);
+    return params;
+  }, [filters]);
+
+  function usersHref(overrides: Record<string, string | undefined> = {}) {
+    const params = new URLSearchParams(filterParams);
+    params.set("tab", "users");
+    for (const [key, value] of Object.entries(overrides)) {
+      if (value === undefined || value === "") params.delete(key);
+      else params.set(key, value);
+    }
+    return `/admin?${params.toString()}`;
   }
 
   function openTicket(ticket: AdminTicketRow) {
@@ -121,17 +173,44 @@ export function AdminView({
     setReplyStatus((ticket.status as TicketStatus) ?? "open");
   }
 
-  async function changeRole(user: AdminUserRow) {
-    const nextRole = user.role === "admin" ? "user" : "admin";
+  function openRoleEditor(mode: "create" | "edit", role?: RoleRow) {
+    setNewRoleKey(role?.key ?? "");
+    setRoleEditor({
+      mode,
+      key: role?.key,
+      name: role?.name ?? "",
+      description: role?.description ?? "",
+      permissions: role?.permissions ?? ["dashboard.view"],
+    });
+  }
+
+  async function saveProfile(event: React.FormEvent<HTMLFormElement>, userId: string) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
     setSaving(true);
-    const result = await setUserRoleAction({ userId: user.id, role: nextRole });
+    const result = await updateUserProfileAction({
+      userId,
+      displayName: String(form.get("displayName") ?? ""),
+      username: String(form.get("username") ?? ""),
+      bio: String(form.get("bio") ?? ""),
+      githubUsername: String(form.get("githubUsername") ?? ""),
+    });
+    setSaving(false);
+    if (!result.ok) return toast.error(result.error ?? "Could not update the profile.");
+    toast.success(result.message ?? "Profile updated.");
+    refresh();
+  }
+
+  async function changeUserRole(userId: string, roleKey: string) {
+    setSaving(true);
+    const result = await setUserRoleAction({ userId, roleKey });
     setSaving(false);
     if (!result.ok) return toast.error(result.error ?? "Could not change the role.");
     toast.success(result.message ?? "Role updated.");
     refresh();
   }
 
-  async function changeStatus(user: AdminUserRow) {
+  async function changeUserStatus(user: AdminUserRow) {
     const nextStatus = user.status === "suspended" ? "active" : "suspended";
     setSaving(true);
     const result = await setUserStatusAction({ userId: user.id, status: nextStatus });
@@ -141,15 +220,49 @@ export function AdminView({
     refresh();
   }
 
-  async function removeUser() {
-    if (!deleteTarget) return;
+  async function removeUser(userId: string, confirmation: string) {
     setSaving(true);
-    const result = await deleteUserAction({ userId: deleteTarget.id, confirmation: deleteConfirm });
+    const result = await deleteUserAction({ userId, confirmation });
     setSaving(false);
-    if (!result.ok) return toast.error(result.error ?? "Could not delete the user.");
+    if (!result.ok) {
+      toast.error(result.error ?? "Could not delete the user.");
+      return;
+    }
     toast.success(result.message ?? "User deleted.");
-    setDeleteTarget(null);
-    setDeleteConfirm("");
+    router.push("/admin?tab=users");
+    refresh();
+  }
+
+  async function saveRole() {
+    if (!roleEditor) return;
+    setSaving(true);
+    const payload = {
+      name: roleEditor.name,
+      description: roleEditor.description,
+      permissions: roleEditor.permissions,
+    };
+    const result =
+      roleEditor.mode === "create"
+        ? await createRoleAction({ ...payload, key: newRoleKey || undefined })
+        : await updateRoleAction({ ...payload, key: roleEditor.key });
+    setSaving(false);
+    if (!result.ok) return toast.error(result.error ?? "Could not save the role.");
+    toast.success(result.message ?? "Role saved.");
+    setRoleEditor(null);
+    refresh();
+  }
+
+  async function removeRole() {
+    if (!deleteRoleTarget) return;
+    setSaving(true);
+    const result = await deleteRoleAction({ key: deleteRoleTarget.key });
+    setSaving(false);
+    if (!result.ok) {
+      toast.error(result.error ?? "Could not delete the role.");
+      return;
+    }
+    toast.success(result.message ?? "Role deleted.");
+    setDeleteRoleTarget(null);
     refresh();
   }
 
@@ -168,17 +281,19 @@ export function AdminView({
     refresh();
   }
 
-  async function removeTicket(ticket: AdminTicketRow) {
+  async function removeTicket() {
+    if (!deleteTicketTarget) return;
     setSaving(true);
-    const result = await deleteTicketAction({ ticketId: ticket.id });
+    const result = await deleteTicketAction({ ticketId: deleteTicketTarget.id });
     setSaving(false);
-    if (!result.ok) return toast.error(result.error ?? "Could not delete the ticket.");
+    if (!result.ok) {
+      toast.error(result.error ?? "Could not delete the ticket.");
+      return;
+    }
     toast.success(result.message ?? "Ticket deleted.");
-    setActiveTicket(null);
+    setDeleteTicketTarget(null);
     refresh();
   }
-
-  const activeUsers = overview.usage.total - overview.usage.suspended;
 
   return (
     <>
@@ -186,28 +301,32 @@ export function AdminView({
         eyebrow="Restricted area"
         icon={ShieldCheck}
         title="Admin console"
-        description={`Signed in as ${adminName}. Real usage, people and support tickets from the workspace database.`}
+        description={`Signed in as ${actorName} (${actorRoleName}). Real usage, people, roles and support tickets.`}
         actions={
-          <Link href="/support" className="btn btn-secondary">
-            <LifeBuoy size={15} /> Open support
-          </Link>
+          canManageSupport ? (
+            <Link href="/admin?tab=tickets" className="btn btn-secondary">
+              <LifeBuoy size={15} /> Support queue
+            </Link>
+          ) : undefined
         }
       />
 
       <nav className="admin-tabs" aria-label="Admin sections">
-        {tabs.map((item) => (
-          <Link
-            key={item.id}
-            href={`/admin?tab=${item.id}`}
-            className={cn("admin-tab", tab === item.id && "active")}
-            aria-current={tab === item.id ? "page" : undefined}
-          >
-            {item.label}
-            {item.id === "tickets" && queue.awaiting > 0 ? (
-              <span className="admin-tab-count">{queue.awaiting}</span>
-            ) : null}
-          </Link>
-        ))}
+        {tabs
+          .filter((item) => !item.permission || permissions.includes(item.permission))
+          .map((item) => (
+            <Link
+              key={item.id}
+              href={`/admin?tab=${item.id}`}
+              className={cn("admin-tab", tab === item.id && "active")}
+              aria-current={tab === item.id ? "page" : undefined}
+            >
+              {item.label}
+              {item.id === "tickets" && queue.awaiting > 0 ? (
+                <span className="admin-tab-count">{queue.awaiting}</span>
+              ) : null}
+            </Link>
+          ))}
         <span className="admin-tabs-meta">
           {pending ? <Loader2 size={13} className="animate-spin" /> : null}
           {overview.usage.total} accounts · {activeUsers} active
@@ -217,11 +336,41 @@ export function AdminView({
       {tab === "overview" ? (
         <>
           <section className="admin-metrics" aria-label="Usage metrics">
-            <Metric label="People" value={overview.usage.total} hint="Registered accounts" icon={Users} />
-            <Metric label="Active today" value={overview.usage.activeToday} hint="Seen in the last 24h" icon={Activity} />
-            <Metric label="Active this week" value={overview.usage.activeWeek} hint="Seen in the last 7 days" icon={Activity} />
-            <Metric label="New this week" value={overview.usage.newThisWeek} hint="Recent signups" icon={UserCheck} />
-            <Metric label="Awaiting reply" value={queue.awaiting} hint="Open + in progress" icon={LifeBuoy} />
+            <MetricLink
+              href="/admin?tab=users"
+              label="People"
+              value={overview.usage.total}
+              hint="All registered accounts"
+              icon={Users}
+            />
+            <MetricLink
+              href="/admin?tab=users&activity=today"
+              label="Active today"
+              value={overview.usage.activeToday}
+              hint="Seen in the last 24h"
+              icon={Activity}
+            />
+            <MetricLink
+              href="/admin?tab=users&activity=week"
+              label="Active this week"
+              value={overview.usage.activeWeek}
+              hint="Seen in the last 7 days"
+              icon={Activity}
+            />
+            <MetricLink
+              href="/admin?tab=users&sort=newest"
+              label="New this week"
+              value={overview.usage.newThisWeek}
+              hint="Recent signups"
+              icon={UserCheck}
+            />
+            <MetricLink
+              href="/admin?tab=tickets&filter=awaiting"
+              label="Awaiting reply"
+              value={queue.awaiting}
+              hint="Open + in progress"
+              icon={LifeBuoy}
+            />
           </section>
 
           <div className="admin-columns">
@@ -234,7 +383,7 @@ export function AdminView({
                 <UsageRow label="Projects created" value={overview.totals.projects} />
                 <UsageRow label="Notes written" value={overview.totals.notes} />
                 <UsageRow label="Support tickets" value={overview.totals.tickets} />
-                <UsageRow label="Administrators" value={overview.usage.admins} />
+                <UsageRow label="Roles configured" value={overview.totals.roles} />
                 <UsageRow label="Suspended accounts" value={overview.usage.suspended} />
               </div>
             </section>
@@ -242,9 +391,11 @@ export function AdminView({
             <section className="panel admin-panel">
               <div className="admin-panel-head">
                 <h2>Recent signups</h2>
-                <Link href="/admin?tab=users" className="panel-link">
-                  Manage <ArrowUpRight size={12} />
-                </Link>
+                {canManageUsers ? (
+                  <Link href="/admin?tab=users" className="panel-link">
+                    Manage <ArrowUpRight size={12} />
+                  </Link>
+                ) : null}
               </div>
               <div className="admin-list">
                 {overview.recentUsers.length === 0 ? (
@@ -265,94 +416,110 @@ export function AdminView({
             </section>
           </div>
 
-          <section className="panel admin-panel" style={{ marginTop: 16 }}>
-            <div className="admin-panel-head">
-              <h2>Latest tickets</h2>
-              <Link href="/admin?tab=tickets" className="panel-link">
-                Open queue <ArrowUpRight size={12} />
-              </Link>
-            </div>
-            <div className="admin-list">
-              {overview.recentTickets.length === 0 ? (
-                <p className="admin-empty">No tickets yet. Users can open one from Support.</p>
-              ) : (
-                overview.recentTickets.map((ticket) => (
-                  <button
-                    key={ticket.id}
-                    type="button"
-                    className="admin-list-row admin-list-button"
-                    onClick={() => openTicket(ticket)}
-                  >
-                    <span className={statusBadgeClass(ticket.status)}>{ticketStatusLabels[ticket.status as TicketStatus]}</span>
-                    <span className="admin-list-copy">
-                      <strong>{ticket.subject}</strong>
-                      <span>
-                        {ticket.user.displayName} · {relativeTime(ticket.createdAt)}
+          {canManageSupport ? (
+            <section className="panel admin-panel" style={{ marginTop: 16 }}>
+              <div className="admin-panel-head">
+                <h2>Latest tickets</h2>
+                <Link href="/admin?tab=tickets" className="panel-link">
+                  Open queue <ArrowUpRight size={12} />
+                </Link>
+              </div>
+              <div className="admin-list">
+                {overview.recentTickets.length === 0 ? (
+                  <p className="admin-empty">No tickets yet. Users can open one from Support.</p>
+                ) : (
+                  overview.recentTickets.map((ticket) => (
+                    <button
+                      key={ticket.id}
+                      type="button"
+                      className="admin-list-row admin-list-button"
+                      onClick={() => openTicket(ticket)}
+                    >
+                      <span className={statusBadgeClass(ticket.status)}>
+                        {ticketStatusLabels[ticket.status as TicketStatus]}
                       </span>
-                    </span>
-                    <span className={priorityBadgeClass(ticket.priority)}>
-                      {ticketPriorityLabels[ticket.priority as TicketPriority]}
-                    </span>
-                  </button>
-                ))
-              )}
-            </div>
-          </section>
+                      <span className="admin-list-copy">
+                        <strong>{ticket.subject}</strong>
+                        <span>
+                          {ticket.user.displayName} · {relativeTime(ticket.createdAt)}
+                        </span>
+                      </span>
+                      <span className={priorityBadgeClass(ticket.priority)}>
+                        {ticketPriorityLabels[ticket.priority as TicketPriority]}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </section>
+          ) : null}
         </>
       ) : null}
 
-      {tab === "users" ? (
+      {tab === "users" && canManageUsers ? (
         <>
-          <div className="admin-toolbar">
-            <form action="/admin" method="get" className="admin-search">
-              <input type="hidden" name="tab" value="users" />
+          <form action="/admin" method="get" className="admin-filter-bar">
+            <input type="hidden" name="tab" value="users" />
+            <label className="admin-search">
               <Search size={14} />
               <input
                 name="q"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search name, username or email"
+                defaultValue={filters.q}
+                placeholder="Search username, name or email"
                 aria-label="Search users"
               />
-              <button type="submit" className="btn btn-secondary btn-sm">
-                Search
-              </button>
-            </form>
-            <div className="admin-chips">
-              {userFilters.map((filter) => (
-                <Link
-                  key={filter.id}
-                  href={`/admin?tab=users&filter=${filter.id}`}
-                  className={cn("admin-chip", userFilter === filter.id && "active")}
-                >
-                  {filter.label}
-                </Link>
+            </label>
+            <select name="role" defaultValue={filters.role} className="select admin-select" aria-label="Filter by role">
+              <option value="all">All roles</option>
+              {roles.map((role) => (
+                <option key={role.key} value={role.key}>
+                  {role.name}
+                </option>
               ))}
-            </div>
-          </div>
+            </select>
+            <select name="status" defaultValue={filters.status} className="select admin-select" aria-label="Filter by status">
+              <option value="all">All statuses</option>
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+            </select>
+            <select name="activity" defaultValue={filters.activity} className="select admin-select" aria-label="Filter by activity">
+              <option value="all">Any activity</option>
+              <option value="today">Today</option>
+              <option value="week">Last 7 days</option>
+              <option value="never">Never signed in</option>
+            </select>
+            <select name="sort" defaultValue={filters.sort} className="select admin-select" aria-label="Sort users">
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="name">Name A–Z</option>
+              <option value="lastSeen">Last active</option>
+            </select>
+            <button type="submit" className="btn btn-secondary btn-sm">
+              Apply
+            </button>
+            <Link href="/admin?tab=users" className="btn btn-ghost btn-sm">
+              Reset
+            </Link>
+          </form>
 
           <section className="panel admin-panel">
             <div className="admin-panel-head">
-              <h2>{users.length} people</h2>
-              <span className="admin-muted">Suspending blocks sign-in; deleting removes all owned records.</span>
+              <h2>{users.total} people</h2>
+              <span className="admin-muted">
+                Showing {users.rows.length} of {users.total} · page {users.page} / {users.pageCount}
+              </span>
             </div>
             <div className="admin-user-list">
-              {users.length === 0 ? (
-                <p className="admin-empty">
-                  {search ? `No accounts match “${search}”.` : "No accounts match this filter."}
-                </p>
+              {users.rows.length === 0 ? (
+                <p className="admin-empty">No accounts match these filters.</p>
               ) : (
-                users.map((user) => (
+                users.rows.map((user) => (
                   <div key={user.id} className="admin-user-row">
                     <Avatar name={user.displayName} src={user.avatarUrl} size="sm" />
                     <div className="admin-user-identity">
                       <div className="admin-user-name">
                         {user.displayName}
-                        {user.role === "admin" ? (
-                          <span className="badge badge-green">
-                            <ShieldCheck size={10} /> Admin
-                          </span>
-                        ) : null}
+                        <span className="badge badge-slate">{user.roleName}</span>
                         {user.status === "suspended" ? (
                           <span className="badge badge-red">Suspended</span>
                         ) : null}
@@ -374,41 +541,147 @@ export function AdminView({
                     </div>
                     <div className="admin-user-times">
                       <span>Joined {formatDate(user.createdAt)}</span>
-                      <span>
-                        {user.lastSeenAt ? `Seen ${relativeTime(user.lastSeenAt)}` : "Never signed in"}
-                      </span>
+                      <span>{user.lastSeenAt ? `Seen ${relativeTime(user.lastSeenAt)}` : "Never signed in"}</span>
                     </div>
                     <div className="admin-user-actions">
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => changeRole(user)}
-                        disabled={saving}
+                      <Link
+                        href={usersHref({ user: user.id, page: String(users.page) })}
+                        className="btn btn-secondary btn-sm"
                       >
-                        <ShieldCheck size={13} /> {user.role === "admin" ? "Demote" : "Promote"}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => changeStatus(user)}
-                        disabled={saving}
-                      >
-                        {user.status === "suspended" ? <UserCheck size={13} /> : <UserX size={13} />}
-                        {user.status === "suspended" ? "Reactivate" : "Suspend"}
-                      </button>
-                      <button
-                        type="button"
-                        className="icon-button"
-                        aria-label={`Delete ${user.displayName}`}
-                        onClick={() => {
-                          setDeleteTarget(user);
-                          setDeleteConfirm("");
-                        }}
-                        style={{ color: "var(--danger)" }}
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                        <ArrowUpRight size={13} /> Profile
+                      </Link>
                     </div>
+                  </div>
+                ))
+              )}
+            </div>
+            {users.pageCount > 1 ? (
+              <div className="admin-pagination">
+                <Link
+                  href={usersHref({ page: String(Math.max(1, users.page - 1)) })}
+                  className={cn("btn btn-ghost btn-sm", users.page <= 1 && "disabled")}
+                  aria-disabled={users.page <= 1}
+                >
+                  <ArrowLeft size={14} /> Previous
+                </Link>
+                <span>
+                  Page {users.page} of {users.pageCount}
+                </span>
+                <Link
+                  href={usersHref({ page: String(Math.min(users.pageCount, users.page + 1)) })}
+                  className={cn("btn btn-ghost btn-sm", users.page >= users.pageCount && "disabled")}
+                  aria-disabled={users.page >= users.pageCount}
+                >
+                  Next <ArrowRight size={14} />
+                </Link>
+              </div>
+            ) : null}
+          </section>
+
+          {detail ? (
+            <UserDetailModal
+              key={detail.id}
+              detail={detail}
+              roles={roles}
+              permissions={permissions}
+              actorId={actorId}
+              actorRoleKey={actorRoleKey}
+              saving={saving}
+              onClose={() => router.push(usersHref({ user: undefined }))}
+              onSaveProfile={saveProfile}
+              onChangeRole={changeUserRole}
+              onToggleStatus={changeUserStatus}
+              onDelete={removeUser}
+            />
+          ) : null}
+        </>
+      ) : null}
+
+      {tab === "roles" && canManageRoles ? (
+        <>
+          <div className="admin-toolbar">
+            <div>
+              <h2 className="admin-section-title">Roles & permissions</h2>
+              <p className="admin-muted">
+                {roles.length} roles · {roles.filter((role) => !role.isSystem).length} custom
+              </p>
+            </div>
+            <button type="button" className="btn btn-primary" onClick={() => openRoleEditor("create")}>
+              <Plus size={15} /> New role
+            </button>
+          </div>
+
+          <div className="admin-role-grid">
+            {roles.map((role) => (
+              <article key={role.key} className="admin-role-card">
+                <header>
+                  <span className="admin-role-icon">
+                    <KeyRound size={15} />
+                  </span>
+                  <div>
+                    <h3>
+                      {role.name}
+                      {role.isSystem ? (
+                        <span className="badge badge-slate">System</span>
+                      ) : (
+                        <span className="badge badge-purple">Custom</span>
+                      )}
+                    </h3>
+                    <p className="admin-role-key">
+                      {role.key} · {role.userCount} user{role.userCount === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                </header>
+                <p className="admin-role-description">{role.description || "No description."}</p>
+                <div className="admin-permission-chips">
+                  {role.permissions.map((permission) => (
+                    <span key={permission} className="admin-permission-chip">
+                      {permissionDefinitions.find((item) => item.key === permission)?.label ?? permission}
+                    </span>
+                  ))}
+                </div>
+                <footer>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => openRoleEditor("edit", role)}
+                    disabled={role.key === "owner"}
+                    title={role.key === "owner" ? "The Owner role is locked" : undefined}
+                  >
+                    <Pencil size={13} /> Edit
+                  </button>
+                  {!role.isSystem ? (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      style={{ color: "var(--danger)" }}
+                      onClick={() => setDeleteRoleTarget(role)}
+                    >
+                      <Trash2 size={13} /> Delete
+                    </button>
+                  ) : null}
+                </footer>
+              </article>
+            ))}
+          </div>
+
+          <section className="panel admin-panel" style={{ marginTop: 16 }}>
+            <div className="admin-panel-head">
+              <h2>Audit log</h2>
+              <span className="admin-muted">Latest administrative changes</span>
+            </div>
+            <div className="admin-audit">
+              {audit.length === 0 ? (
+                <p className="admin-empty">No administrative changes recorded yet.</p>
+              ) : (
+                audit.map((entry) => (
+                  <div key={entry.id} className="admin-audit-row">
+                    <span className="admin-audit-action">{entry.action.replace(/[._]/g, " ")}</span>
+                    <span className="admin-audit-detail">
+                      {entry.actorName ?? entry.actorEmail ?? "Unknown admin"} · {entry.targetType}
+                      {entry.targetId ? ` ${entry.targetId.slice(0, 8)}` : ""}
+                    </span>
+                    <span className="admin-audit-time">{formatDateTime(entry.createdAt)}</span>
                   </div>
                 ))
               )}
@@ -417,19 +690,27 @@ export function AdminView({
         </>
       ) : null}
 
-      {tab === "tickets" ? (
+      {tab === "tickets" && canManageSupport ? (
         <>
           <div className="admin-toolbar">
             <div className="admin-chips">
-              {ticketFilters.map((filter) => (
+              {(["all", "awaiting", "open", "in_progress", "resolved", "closed"] as TicketFilter[]).map((filter) => (
                 <Link
-                  key={filter.id}
-                  href={`/admin?tab=tickets&filter=${filter.id}`}
-                  className={cn("admin-chip", ticketFilter === filter.id && "active")}
+                  key={filter}
+                  href={`/admin?tab=tickets&filter=${filter}`}
+                  className={cn("admin-chip", ticketFilter === filter && "active")}
                 >
-                  {filter.label}
-                  {filter.id !== "all" ? (
-                    <span className="admin-chip-count">{queue[filter.id as TicketStatus]}</span>
+                  {filter === "all"
+                    ? "All"
+                    : filter === "awaiting"
+                      ? "Awaiting"
+                      : filter === "in_progress"
+                        ? "In progress"
+                        : filter.charAt(0).toUpperCase() + filter.slice(1)}
+                  {filter === "awaiting" ? (
+                    <span className="admin-chip-count">{queue.awaiting}</span>
+                  ) : filter !== "all" ? (
+                    <span className="admin-chip-count">{queue[filter as TicketStatus]}</span>
                   ) : null}
                 </Link>
               ))}
@@ -501,7 +782,7 @@ export function AdminView({
               <button
                 type="button"
                 className="btn btn-ghost"
-                onClick={() => removeTicket(activeTicket)}
+                onClick={() => setDeleteTicketTarget(activeTicket)}
                 disabled={saving}
                 style={{ color: "var(--danger)", marginRight: "auto" }}
               >
@@ -571,72 +852,149 @@ export function AdminView({
         ) : null}
       </Modal>
 
+      <ConfirmDialog
+        open={Boolean(deleteTicketTarget)}
+        onClose={() => setDeleteTicketTarget(null)}
+        onConfirm={removeTicket}
+        title={`Delete ticket “${deleteTicketTarget?.subject ?? ""}”?`}
+        description="The ticket and its reply are permanently removed."
+        confirmLabel="Delete ticket"
+      />
+
       <Modal
-        open={Boolean(deleteTarget)}
-        onClose={() => setDeleteTarget(null)}
-        title={`Delete ${deleteTarget?.displayName ?? "user"}?`}
-        description="This permanently deletes the account, profile, projects, notes, workspaces, tracked files and support tickets."
+        open={Boolean(roleEditor)}
+        onClose={() => setRoleEditor(null)}
+        title={roleEditor?.mode === "create" ? "Create a custom role" : `Edit ${roleEditor?.name ?? "role"}`}
+        description="Permissions are enforced on the server for every action."
+        size="lg"
         footer={
           <>
-            <button type="button" className="btn btn-secondary" onClick={() => setDeleteTarget(null)}>
+            <button type="button" className="btn btn-secondary" onClick={() => setRoleEditor(null)}>
               Cancel
             </button>
             <button
               type="button"
               className="btn btn-primary"
-              style={{ background: "var(--danger)", borderColor: "var(--danger)" }}
-              disabled={saving || deleteConfirm !== "DELETE"}
-              onClick={removeUser}
+              onClick={saveRole}
+              disabled={saving || !roleEditor?.name.trim() || (roleEditor?.permissions.length ?? 0) === 0}
             >
-              {saving ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} Delete
-              user
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Save role
             </button>
           </>
         }
       >
-        <div className="field">
-          <label className="label" htmlFor="delete-user-confirm">
-            Type DELETE to confirm
-          </label>
-          <input
-            id="delete-user-confirm"
-            className="input"
-            value={deleteConfirm}
-            onChange={(event) => setDeleteConfirm(event.target.value)}
-            placeholder="DELETE"
-            autoComplete="off"
-          />
-          <span className="label-hint">
-            {deleteTarget?.email ?? `@${deleteTarget?.username}`} · {deleteTarget?.projectCount ?? 0} projects ·{" "}
-            {deleteTarget?.noteCount ?? 0} notes
-          </span>
-        </div>
+        {roleEditor ? (
+          <div className="form-stack">
+            <div className="field">
+              <label className="label" htmlFor="role-name">
+                Role name
+              </label>
+              <input
+                id="role-name"
+                className="input"
+                value={roleEditor.name}
+                onChange={(event) => setRoleEditor({ ...roleEditor, name: event.target.value })}
+              />
+            </div>
+            {roleEditor.mode === "create" ? (
+              <div className="field">
+                <label className="label" htmlFor="role-key">
+                  Role key <span className="label-hint">Optional — generated from the name</span>
+                </label>
+                <input
+                  id="role-key"
+                  className="input"
+                  value={newRoleKey}
+                  onChange={(event) => setNewRoleKey(event.target.value.toLowerCase())}
+                  placeholder="e.g. support-lead"
+                  autoComplete="off"
+                />
+              </div>
+            ) : (
+              <div className="field">
+                <label className="label">Role key</label>
+                <input className="input" value={roleEditor.key ?? ""} disabled />
+              </div>
+            )}
+            <div className="field">
+              <label className="label" htmlFor="role-description">
+                Description
+              </label>
+              <textarea
+                id="role-description"
+                className="textarea"
+                rows={2}
+                value={roleEditor.description}
+                onChange={(event) => setRoleEditor({ ...roleEditor, description: event.target.value })}
+              />
+            </div>
+            <div className="field">
+              <span className="label">Permissions</span>
+              <div className="admin-permission-grid">
+                {permissionDefinitions.map((permission) => {
+                  const checked = roleEditor.permissions.includes(permission.key);
+                  return (
+                    <label key={permission.key} className="admin-permission-option">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(event) =>
+                          setRoleEditor({
+                            ...roleEditor,
+                            permissions: event.target.checked
+                              ? [...roleEditor.permissions, permission.key]
+                              : roleEditor.permissions.filter((key) => key !== permission.key),
+                          })
+                        }
+                      />
+                      <span>
+                        <strong>{permission.label}</strong>
+                        <small>{permission.description}</small>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        ) : null}
       </Modal>
 
+      <ConfirmDialog
+        open={Boolean(deleteRoleTarget)}
+        onClose={() => setDeleteRoleTarget(null)}
+        onConfirm={removeRole}
+        title={`Delete the ${deleteRoleTarget?.name ?? "custom"} role?`}
+        description="Custom roles can only be deleted when no user is assigned to them."
+        confirmLabel="Delete role"
+      />
     </>
   );
 }
 
-function Metric({
+function MetricLink({
+  href,
   label,
   value,
   hint,
   icon: Icon,
 }: {
+  href: string;
   label: string;
   value: number;
   hint: string;
   icon: React.ComponentType<{ size?: number | string; className?: string }>;
 }) {
   return (
-    <div className="admin-metric">
+    <Link href={href} className="admin-metric admin-metric-link" aria-label={`${label}: ${value}. View details.`}>
       <span className="admin-metric-icon">
         <Icon size={16} />
       </span>
       <strong>{value}</strong>
       <span className="admin-metric-label">{label}</span>
       <span className="admin-metric-hint">{hint}</span>
-    </div>
+      <ArrowUpRight size={13} className="admin-metric-arrow" />
+    </Link>
   );
 }
 
@@ -649,5 +1007,239 @@ function UsageRow({ label, value }: { label: string; value: number }) {
   );
 }
 
+function UserDetailModal({
+  detail,
+  roles,
+  permissions,
+  actorId,
+  actorRoleKey,
+  saving,
+  onClose,
+  onSaveProfile,
+  onChangeRole,
+  onToggleStatus,
+  onDelete,
+}: {
+  detail: AdminUserDetail;
+  roles: RoleRow[];
+  permissions: PermissionKey[];
+  actorId: string;
+  actorRoleKey: string;
+  saving: boolean;
+  onClose: () => void;
+  onSaveProfile: (event: React.FormEvent<HTMLFormElement>, userId: string) => void;
+  onChangeRole: (userId: string, roleKey: string) => void;
+  onToggleStatus: (user: AdminUserRow) => void;
+  onDelete: (userId: string, confirmation: string) => void;
+}) {
+  const [roleKey, setRoleKey] = useState(detail.role);
+  const [confirmation, setConfirmation] = useState("");
+  const canManageRoles = permissions.includes("roles.manage");
+  const isSelf = detail.id === actorId;
+  const assignableRoles = actorRoleKey === "owner" ? roles : roles.filter((role) => role.key !== "owner");
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={detail.displayName}
+      description={`@${detail.username} · ${detail.email ?? "no email on file"}`}
+      size="lg"
+      footer={
+        <button type="button" className="btn btn-secondary" onClick={onClose}>
+          Close
+        </button>
+      }
+    >
+      <div className="admin-detail">
+        <div className="admin-detail-head">
+          <Avatar name={detail.displayName} src={detail.avatarUrl} size="lg" />
+          <div>
+            <h3>{detail.displayName}</h3>
+            <p>
+              @{detail.username} · {detail.roleName} ·{" "}
+              {detail.status === "suspended" ? "Suspended" : "Active"}
+            </p>
+          </div>
+        </div>
+
+        <dl className="admin-detail-grid">
+          <div>
+            <dt>User ID</dt>
+            <dd className="admin-mono">{detail.id}</dd>
+          </div>
+          <div>
+            <dt>Username</dt>
+            <dd>@{detail.username}</dd>
+          </div>
+          <div>
+            <dt>Email</dt>
+            <dd>{detail.email ?? "—"}</dd>
+          </div>
+          <div>
+            <dt>Role</dt>
+            <dd>{detail.roleName}</dd>
+          </div>
+          <div>
+            <dt>Account status</dt>
+            <dd>{detail.status === "suspended" ? "Suspended" : "Active"}</dd>
+          </div>
+          <div>
+            <dt>Created</dt>
+            <dd>{formatDateTime(detail.createdAt)}</dd>
+          </div>
+          <div>
+            <dt>Last active</dt>
+            <dd>{detail.lastSeenAt ? formatDateTime(detail.lastSeenAt) : "Never"}</dd>
+          </div>
+          <div>
+            <dt>GitHub</dt>
+            <dd>{detail.githubUsername ? `@${detail.githubUsername}` : "—"}</dd>
+          </div>
+          <div>
+            <dt>Bio</dt>
+            <dd>{detail.bio || "—"}</dd>
+          </div>
+          <div>
+            <dt>Content</dt>
+            <dd>
+              {detail.projectCount} projects · {detail.noteCount} notes · {detail.ticketCount} tickets
+            </dd>
+          </div>
+        </dl>
+
+        {canManageRoles ? (
+          <section className="admin-detail-section">
+            <h4>Role assignment</h4>
+            <div className="admin-detail-inline">
+              <select
+                className="select"
+                value={roleKey}
+                onChange={(event) => setRoleKey(event.target.value)}
+                aria-label="Assign role"
+              >
+                {assignableRoles.map((role) => (
+                  <option key={role.key} value={role.key}>
+                    {role.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                disabled={saving || isSelf || roleKey === detail.role}
+                onClick={() => onChangeRole(detail.id, roleKey)}
+              >
+                <ShieldCheck size={14} /> Save role
+              </button>
+            </div>
+            <p className="admin-muted">
+              Permissions: {detail.rolePermissions.join(", ") || "none"}
+            </p>
+          </section>
+        ) : null}
+
+        <section className="admin-detail-section">
+          <h4>Account</h4>
+          <div className="admin-detail-inline">
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => onToggleStatus(detail)}
+              disabled={saving || isSelf}
+            >
+              {detail.status === "suspended" ? <UserCheck size={14} /> : <UserX size={14} />}
+              {detail.status === "suspended" ? "Reactivate account" : "Suspend account"}
+            </button>
+            <span className="admin-muted">
+              {detail.status === "suspended"
+                ? "Suspended accounts cannot sign in."
+                : "Suspension blocks sign-in immediately."}
+            </span>
+          </div>
+        </section>
+
+        <section className="admin-detail-section">
+          <h4>Edit permitted information</h4>
+          <form className="admin-edit-form" onSubmit={(event) => onSaveProfile(event, detail.id)}>
+            <div className="field">
+              <label className="label" htmlFor="detail-display-name">
+                Display name
+              </label>
+              <input id="detail-display-name" name="displayName" className="input" defaultValue={detail.displayName} />
+            </div>
+            <div className="field">
+              <label className="label" htmlFor="detail-username">
+                Username
+              </label>
+              <input id="detail-username" name="username" className="input" defaultValue={detail.username} />
+            </div>
+            <div className="field">
+              <label className="label" htmlFor="detail-github">
+                GitHub username
+              </label>
+              <input
+                id="detail-github"
+                name="githubUsername"
+                className="input"
+                defaultValue={detail.githubUsername ?? ""}
+              />
+            </div>
+            <div className="field admin-edit-bio">
+              <label className="label" htmlFor="detail-bio">
+                Bio
+              </label>
+              <textarea id="detail-bio" name="bio" className="textarea" rows={2} defaultValue={detail.bio} />
+            </div>
+            <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>
+              Save profile
+            </button>
+          </form>
+        </section>
+
+        <section className="admin-detail-section">
+          <h4>Account activity</h4>
+          <div className="admin-audit">
+            {detail.recentActivity.length === 0 ? (
+              <p className="admin-muted">No administrative activity recorded for this account.</p>
+            ) : (
+              detail.recentActivity.map((entry) => (
+                <div key={entry.id} className="admin-audit-row">
+                  <span className="admin-audit-action">{entry.action.replace(/[._]/g, " ")}</span>
+                  <span className="admin-audit-detail">
+                    by {entry.actorName ?? entry.actorEmail ?? "system"}
+                  </span>
+                  <span className="admin-audit-time">{formatDateTime(entry.createdAt)}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+
+        <section className="admin-detail-section admin-danger-zone">
+          <h4>Delete account</h4>
+          <p className="admin-muted">This permanently removes the account and all owned records.</p>
+          <div className="admin-detail-inline">
+            <input
+              className="input"
+              value={confirmation}
+              onChange={(event) => setConfirmation(event.target.value)}
+              placeholder="Type DELETE"
+              aria-label="Type DELETE to confirm"
+            />
+            <button
+              type="button"
+              className="btn btn-danger btn-sm"
+              disabled={saving || isSelf || confirmation !== "DELETE"}
+              onClick={() => onDelete(detail.id, confirmation)}
+            >
+              <Trash2 size={14} /> Delete user
+            </button>
+          </div>
+        </section>
+      </div>
+    </Modal>
+  );
+}
 
 

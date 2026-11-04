@@ -196,3 +196,7 @@ create policy "tickets_delete_own" on public.tickets
 -- clients must never be able to promote or reactivate an account themselves.
 revoke update (role, status) on public.profiles from authenticated;
 revoke update (role, status) on public.profiles from anon;
+
+-- RBAC tables: server-only. RLS enabled without policies denies browser access.
+alter table public.roles enable row level security;
+alter table public.audit_logs enable row level security;

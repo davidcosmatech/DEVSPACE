@@ -19,13 +19,16 @@ const day = 24 * 60 * 60 * 1000;
 const now = new Date("2026-11-04T12:00:00Z").getTime();
 
 describe("isAdminUser", () => {
-  it("accepts the admin role in any letter case", () => {
+  it("accepts staff roles in any letter case", () => {
     expect(isAdminUser({ role: "admin" })).toBe(true);
     expect(isAdminUser({ role: "ADMIN" })).toBe(true);
+    expect(isAdminUser({ role: "owner" })).toBe(true);
+    expect(isAdminUser({ role: "moderator" })).toBe(true);
   });
 
   it("rejects every other role, including missing roles", () => {
-    expect(isAdminUser({ role: "user" })).toBe(false);
+    expect(isAdminUser({ role: "member" })).toBe(false);
+    expect(isAdminUser({ role: "viewer" })).toBe(false);
     expect(isAdminUser({ role: null })).toBe(false);
     expect(isAdminUser({})).toBe(false);
   });
@@ -119,9 +122,12 @@ describe("ticket validation", () => {
 });
 
 describe("admin user validation", () => {
-  it("accepts only known roles and statuses", () => {
+  it("accepts valid role keys and statuses", () => {
     const id = "3f2c9a1e-1d6b-4f4a-9c3e-8a7b6d5c4e2f";
-    expect(userRoleSchema.safeParse({ userId: id, role: "admin" }).success).toBe(true);
+    expect(userRoleSchema.safeParse({ userId: id, roleKey: "admin" }).success).toBe(true);
+    expect(userRoleSchema.safeParse({ userId: id, roleKey: "owner" }).success).toBe(true);
+    expect(userRoleSchema.safeParse({ userId: id, roleKey: "support-lead" }).success).toBe(true);
+    expect(userRoleSchema.safeParse({ userId: id, roleKey: "Bad Key!" }).success).toBe(false);
     expect(userRoleSchema.safeParse({ userId: id, role: "owner" }).success).toBe(false);
     expect(userStatusSchema.safeParse({ userId: id, status: "suspended" }).success).toBe(true);
     expect(userStatusSchema.safeParse({ userId: id, status: "deleted" }).success).toBe(false);

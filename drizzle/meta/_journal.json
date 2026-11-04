@@ -29,6 +29,13 @@
       "when": 1793820960563,
       "tag": "0003_admin_console_tickets",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793827564847,
+      "tag": "0004_rbac_roles_audit",
+      "breakpoints": true
     }
   ]
 }

@@ -8,8 +8,13 @@ import { projects, workspaceLinks, workspaces } from "@/lib/db/schema";
 
 export const metadata: Metadata = { title: "Browser Workspaces" };
 
-export default async function WorkspacesPage() {
+export default async function WorkspacesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ new?: string }>;
+}) {
   const viewer = await requireViewer();
+  const params = await searchParams;
   const db = await getDb();
   const [workspaceRows, linkRows, projectRows] = await Promise.all([
     db
@@ -34,5 +39,5 @@ export default async function WorkspacesPage() {
     projects: projectRows.filter((project) => project.workspaceId === workspace.id),
   }));
 
-  return <WorkspacesView workspaces={grouped} />;
+  return <WorkspacesView workspaces={grouped} initialNew={params.new === "1"} />;
 }

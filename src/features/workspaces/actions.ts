@@ -3,7 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-import { requireViewer } from "@/lib/auth";
+import { authorize } from "@/lib/auth/rbac";
 import { getDb } from "@/lib/db";
 import { workspaceLinks, workspaces } from "@/lib/db/schema";
 import { normalizeUrl } from "@/lib/utils";
@@ -17,7 +17,7 @@ function revalidate() {
 }
 
 export async function createWorkspaceAction(input: unknown): Promise<WorkspaceActionResult> {
-  const viewer = await requireViewer();
+  const viewer = await authorize("content.manage");
   const parsed = workspaceSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the workspace details." };
@@ -35,7 +35,7 @@ export async function updateWorkspaceAction(
   id: string,
   input: unknown,
 ): Promise<WorkspaceActionResult> {
-  const viewer = await requireViewer();
+  const viewer = await authorize("content.manage");
   const parsed = workspaceSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the workspace details." };
@@ -52,7 +52,7 @@ export async function updateWorkspaceAction(
 }
 
 export async function deleteWorkspaceAction(id: string): Promise<WorkspaceActionResult> {
-  const viewer = await requireViewer();
+  const viewer = await authorize("content.manage");
   const db = await getDb();
   const [deleted] = await db
     .delete(workspaces)
@@ -64,7 +64,7 @@ export async function deleteWorkspaceAction(id: string): Promise<WorkspaceAction
 }
 
 export async function createWorkspaceLinkAction(input: unknown): Promise<WorkspaceActionResult> {
-  const viewer = await requireViewer();
+  const viewer = await authorize("content.manage");
   const parsed = workspaceLinkSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the link details." };
@@ -98,7 +98,7 @@ export async function updateWorkspaceLinkAction(
   id: string,
   input: unknown,
 ): Promise<WorkspaceActionResult> {
-  const viewer = await requireViewer();
+  const viewer = await authorize("content.manage");
   const parsed = workspaceLinkSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the link details." };
@@ -130,7 +130,7 @@ export async function updateWorkspaceLinkAction(
 }
 
 export async function deleteWorkspaceLinkAction(id: string): Promise<WorkspaceActionResult> {
-  const viewer = await requireViewer();
+  const viewer = await authorize("content.manage");
   const db = await getDb();
   const [deleted] = await db
     .delete(workspaceLinks)
@@ -140,3 +140,4 @@ export async function deleteWorkspaceLinkAction(id: string): Promise<WorkspaceAc
   revalidate();
   return { ok: true };
 }
+

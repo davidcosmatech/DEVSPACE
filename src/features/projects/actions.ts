@@ -3,7 +3,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-import { requireViewer } from "@/lib/auth";
+import { authorize } from "@/lib/auth/rbac";
 import { getDb } from "@/lib/db";
 import { projects, workspaces } from "@/lib/db/schema";
 import {
@@ -36,7 +36,7 @@ async function assertWorkspaceOwnership(userId: string, workspaceId: string | nu
 }
 
 export async function createProjectAction(input: unknown): Promise<ProjectActionResult> {
-  const viewer = await requireViewer();
+  const viewer = await authorize("content.manage");
   const parsed = projectSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the project details." };
@@ -66,7 +66,7 @@ export async function createProjectAction(input: unknown): Promise<ProjectAction
 }
 
 export async function updateProjectAction(id: string, input: unknown): Promise<ProjectActionResult> {
-  const viewer = await requireViewer();
+  const viewer = await authorize("content.manage");
   const parsed = projectSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the project details." };
@@ -95,7 +95,7 @@ export async function updateProjectAction(id: string, input: unknown): Promise<P
 }
 
 export async function bulkUpdateProjectsAction(input: unknown): Promise<ProjectActionResult> {
-  const viewer = await requireViewer();
+  const viewer = await authorize("content.manage");
   const parsed = bulkProjectPatchSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Select projects first." };
@@ -128,7 +128,7 @@ export async function bulkUpdateProjectsAction(input: unknown): Promise<ProjectA
 }
 
 export async function deleteProjectAction(id: string): Promise<ProjectActionResult> {
-  const viewer = await requireViewer();
+  const viewer = await authorize("content.manage");
   const db = await getDb();
   const [deleted] = await db
     .delete(projects)
@@ -139,3 +139,4 @@ export async function deleteProjectAction(id: string): Promise<ProjectActionResu
   revalidate();
   return { ok: true };
 }
+

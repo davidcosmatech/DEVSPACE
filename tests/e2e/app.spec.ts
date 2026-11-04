@@ -213,3 +213,48 @@ test("ignores the global shortcut while the user is typing", async ({ page }) =>
   await expect(page.locator(".command-panel")).toBeVisible();
   await page.keyboard.press("Escape");
 });
+
+test("admin console exposes real metrics, user profiles and role management", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/admin");
+  await expect(page.getByRole("heading", { name: "Admin console" })).toBeVisible();
+
+  const metrics = page.locator(".admin-metric-link");
+  await expect(metrics).toHaveCount(5);
+  await page.locator(".admin-metric-link", { hasText: "Active today" }).click();
+  await expect(page).toHaveURL(/tab=users/);
+  await expect(page).toHaveURL(/activity=today/);
+  await expect(page.locator(".admin-user-row").first()).toBeVisible();
+
+  await page.locator(".admin-user-row").first().getByRole("link", { name: "Profile" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("User ID");
+  await expect(dialog).toContainText("Last active");
+  await expect(dialog).toContainText("Role assignment");
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+
+  await page.goto("/admin?tab=roles");
+  await expect(page.locator(".admin-role-card")).toHaveCount(6);
+  await expect(page.locator(".admin-role-card", { hasText: "Owner" })).toBeVisible();
+  await expect(page.locator(".admin-role-card", { hasText: "Viewer" })).toBeVisible();
+});
+
+test("a normal member cannot reach the admin console", async ({ page }) => {
+  const email = `member-${suffix}@example.com`;
+  const username = `member${suffix}`;
+  await page.goto("/register");
+  await page.locator("#displayName").fill("Member Test");
+  await page.locator("#username").fill(username);
+  await page.locator("#email").fill(email);
+  await page.locator("#password").fill("MemberPass123");
+  await page.locator("#confirmPassword").fill("MemberPass123");
+  await page.getByRole("button", { name: /Create account/ }).click();
+  await page.waitForURL("**/dashboard", { timeout: 60_000 });
+
+  await expect(page.getByRole("link", { name: "Admin console" })).toHaveCount(0);
+  await page.goto("/admin");
+  await page.waitForTimeout(600);
+  await expect(page).toHaveURL(/\/dashboard/);
+  await expect(page.getByRole("heading", { name: "Admin console" })).toHaveCount(0);
+});

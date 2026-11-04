@@ -3,13 +3,13 @@
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-import { requireViewer } from "@/lib/auth";
+import { authorize } from "@/lib/auth/rbac";
 import { getDb } from "@/lib/db";
 import { trackerFiles } from "@/lib/db/schema";
 import { deleteStoredFile } from "@/lib/storage";
 
 export async function deleteTrackerFileAction(id: string) {
-  const viewer = await requireViewer();
+  const viewer = await authorize("content.manage");
   const db = await getDb();
   const rows = await db
     .select()
@@ -32,3 +32,4 @@ export async function deleteTrackerFileAction(id: string) {
   revalidatePath("/dashboard");
   return { ok: true };
 }
+

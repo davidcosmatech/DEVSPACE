@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 
 import { getViewer } from "@/lib/auth";
+import { viewerHasPermission } from "@/lib/auth/rbac";
 import { getDb } from "@/lib/db";
 import {
   notes,
@@ -122,6 +123,9 @@ async function buildPlan(userId: string, backup: BackupData) {
 export async function POST(request: Request) {
   const viewer = await getViewer();
   if (!viewer) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await viewerHasPermission(viewer, "content.manage"))) {
+    return NextResponse.json({ error: "You do not have permission to import data." }, { status: 403 });
+  }
 
   const mode = new URL(request.url).searchParams.get("mode") === "apply" ? "apply" : "preview";
   let formData: FormData;
@@ -262,3 +266,4 @@ export async function POST(request: Request) {
     settingsPreserved: true,
   });
 }
+

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Bell,
   ChevronDown,
@@ -11,11 +11,13 @@ import {
   FolderKanban,
   HardDrive,
   House,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   Menu,
   MessageCircle,
   Moon,
+  Plus,
   Rocket,
   Search,
   Settings,
@@ -24,6 +26,7 @@ import {
   Ticket,
   UploadCloud,
   User,
+  Users,
   X,
 } from "lucide-react";
 
@@ -37,6 +40,7 @@ import { useTheme } from "@/components/theme-provider";
 import { logoutAction } from "@/features/auth/actions";
 import { persistThemeAction } from "@/features/settings/actions";
 import type { Viewer } from "@/lib/auth";
+import type { PermissionKey } from "@/lib/rbac";
 import { isTypingTarget } from "@/lib/keyboard";
 import type { ShellNotification } from "@/lib/queries/shell";
 import { cn, relativeTime } from "@/lib/utils";
@@ -53,20 +57,24 @@ const nav = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-const adminNav = { href: "/admin", label: "Admin console", icon: ShieldCheck };
+const adminNav = [
+  { href: "/admin", label: "Admin console", icon: ShieldCheck, permission: null },
+  { href: "/admin?tab=users", label: "User management", icon: Users, permission: "users.manage" },
+  { href: "/admin?tab=roles", label: "Roles & permissions", icon: KeyRound, permission: "roles.manage" },
+] as const;
 
 export function AppShell({
   viewer,
   notifications,
   theme,
-  isAdmin = false,
+  adminPermissions = [],
   openTickets = 0,
   children,
 }: {
   viewer: Viewer;
   notifications: ShellNotification[];
   theme: "dark" | "light";
-  isAdmin?: boolean;
+  adminPermissions?: PermissionKey[];
   openTickets?: number;
   children: React.ReactNode;
 }) {
@@ -104,7 +112,7 @@ export function AppShell({
       <Sidebar
         open={mobileOpen}
         onClose={() => setMobileOpen(false)}
-        isAdmin={isAdmin}
+        adminPermissions={adminPermissions}
         openTickets={openTickets}
       />
 
@@ -112,7 +120,7 @@ export function AppShell({
         <Header
           viewer={viewer}
           notifications={notifications}
-          isAdmin={isAdmin}
+          adminPermissions={adminPermissions}
           onOpenSidebar={() => setMobileOpen(true)}
         />
         <main className="page">{children}</main>
@@ -124,16 +132,36 @@ export function AppShell({
 function Sidebar({
   open,
   onClose,
-  isAdmin,
+  adminPermissions,
   openTickets,
 }: {
   open: boolean;
   onClose: () => void;
-  isAdmin: boolean;
+  adminPermissions: PermissionKey[];
   openTickets: number;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { theme, toggleTheme } = useTheme();
+  const queryTab = searchParams.get("tab") ?? "overview";
+
+  function isActive(href: string) {
+    if (href.startsWith("/admin")) {
+      if (pathname !== "/admin") return false;
+      const tab = href.includes("?")
+        ? new URLSearchParams(href.split("?")[1]).get("tab") ?? "overview"
+        : "overview";
+      return tab === queryTab;
+    }
+    return pathname === href || pathname.startsWith(`${href}/`);
+  }
+
+  const adminItems =
+    adminPermissions.length === 0
+      ? []
+      : adminNav.filter(
+          (item) => !item.permission || adminPermissions.includes(item.permission),
+        );
 
   function switchTheme() {
     const next = theme === "dark" ? "light" : "dark";
@@ -148,8 +176,8 @@ function Sidebar({
       </Link>
 
       <nav className="sidebar-nav" aria-label="Workspace navigation">
-        {(isAdmin ? [...nav, adminNav] : nav).map((item) => {
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        {[...nav, ...adminItems].map((item) => {
+          const active = isActive(item.href);
           return (
             <Link
               key={item.href}
@@ -204,14 +232,15 @@ function Sidebar({
 function Header({
   viewer,
   notifications,
-  isAdmin,
+  adminPermissions,
   onOpenSidebar,
 }: {
   viewer: Viewer;
   notifications: ShellNotification[];
-  isAdmin: boolean;
+  adminPermissions: PermissionKey[];
   onOpenSidebar: () => void;
 }) {
+  const isAdmin = adminPermissions.length > 0;
   const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
@@ -571,6 +600,7 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
 
   const quickLinks = [
     { label: "Go to Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { label: "Create something new", href: "/new", icon: Plus },
     { label: "New project", href: "/projects?new=1", icon: FolderKanban },
     { label: "New note", href: "/notes?new=1", icon: FileText },
     { label: "Upload Markdown", href: "/tracker", icon: UploadCloud },
@@ -730,3 +760,6 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
+
+
+

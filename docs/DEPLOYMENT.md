@@ -198,26 +198,26 @@ After deployment:
 | Production URL | https://devspace-ruby.vercel.app |
 | Vercel project | `devspace` / `davidcosmatechs-projects` |
 | GitHub branch | `devspace-3.0` in `davidcosmatech/DEVSPACE` |
-| Supabase migrations | `0000_init`, `0001_github_cache`, `0002_project_workspaces_visibility`, `0003_admin_console_tickets` applied |
+| Supabase migrations | `0000_init`, `0001_github_cache`, `0002_project_workspaces_visibility`, `0003_admin_console_tickets`, `0004_rbac_roles_audit` applied |
 | RLS | Enabled on all nine public tables; 4 policies per product table |
 | Storage | Private `markdown-files` bucket, 4 MB limit, 4 owner policies |
 | Auth | Supabase Auth; demo account provisioned and confirmed |
 | Registration | `SUPABASE_SKIP_EMAIL_CONFIRMATION=true`; admin-confirmed signup avoids Supabase's default email rate limit |
 | Private GitHub repos | `GITHUB_PRIVATE_TOKEN` (server-only, read-only) set in Vercel for all environments |
-| Admin access | `profiles.role = 'admin'` only; promoted from `/admin` (no email allow-list) |
+| Admin access | RBAC roles (`owner`, `admin`, `moderator`, `editor`, `member`, `viewer` + custom). Only `roles.manage` holders can change roles; only an Owner can grant Owner. No email allow-list. |
 | Usage metrics | Derived from `profiles.last_seen_at` (throttled presence) and existing records; no analytics vendor |
 | Demo workspace | 5 projects, 12 notes, 3 workspaces, 10 tracker records, 8 real uploaded files |
-| Production verification | Login, project CRUD, public/private sections, bulk project updates, workspace assignment, header chat assistant, inline tracker preview, local File Workspace (create/rename/delete/import/preview), GitHub private-repository section, My Tickets sidebar section with open-ticket counter, admin console and support tickets, Storage upload/download/delete, all pages, theme and export — passed with zero console errors |
+| Production verification | Login, project CRUD, public/private sections, bulk project updates, workspace assignment, header chat assistant, inline tracker preview, local File Workspace (create/rename/delete/import/preview), GitHub private-repository section, My Tickets sidebar section with open-ticket counter, RBAC admin console (clickable analytics, user profiles, role/permission editing, audit log) and support tickets, Storage upload/download/delete, all pages, theme and export — passed with zero console errors |
 
 ### Promoting an administrator
 
-The admin console is granted only by the database role, so a fresh database needs one promoted account. Run this once against the production database (or use the existing admin's **Promote** button):
+The admin console is granted by the RBAC role stored in the database. Migration `0004` seeds the six system roles and migrates existing `admin` profiles to `owner`. For a brand-new database, promote the first account once:
 
 ```sql
-update profiles set role = 'admin' where email = 'owner@example.com';
+update profiles set role = 'owner' where email = 'owner@example.com';
 ```
 
-`profiles.role` is revoked from `authenticated`/`anon`, so the role can only be changed by the server connection or the SQL editor. Remove the role with the same statement using `'user'`; the last administrator cannot be demoted from the UI.
+`profiles.role` is revoked from `authenticated`/`anon`, so the role can only be changed by the server connection or the SQL editor. Remove it with the same statement using `'member'`; the last Owner cannot be demoted from the UI.
 
 ### Remaining dashboard step
 
@@ -246,8 +246,8 @@ GitHub `main` still contains the previous static prototype. The full application
 
 - `npm run typecheck` — passed.
 - `npm run lint` — passed.
-- `npm test` — 47/47 tests passed.
-- `npm run test:e2e` — 11/11 Playwright flows passed locally.
+- `npm test` — 63/63 tests passed.
+- `npm run test:e2e` — 13/13 Playwright flows passed locally.
 - `npm run build` — passed (Next.js 16.4.5).
 - Supabase-mode browser test — login, project CRUD, note autosave/reload, workspace/link CRUD, private Storage upload/download/delete, theme persistence and export passed.
 - Production browser test — login, project/workspace CRUD, public/private sections, multi-select bulk updates, chat assistant, inline Markdown preview, local File Workspace page, Storage upload/download/delete, theme persistence and export passed against `https://devspace-ruby.vercel.app` with zero console errors.
@@ -264,6 +264,7 @@ Browsers deliberately forbid a web page from launching Windows Explorer or a des
 - offers “Open in new tab” / download for formats the browser cannot render.
 
 Workspace folder handles are stored in IndexedDB, so the folder list survives reloads; Chrome re-asks for permission when the handle was not recently used. Everything happens on the user's machine — no file content is uploaded to Supabase.
+
 
 
 

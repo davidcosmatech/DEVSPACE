@@ -3,7 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-import { requireViewer } from "@/lib/auth";
+import { authorize } from "@/lib/auth/rbac";
 import { getDb } from "@/lib/db";
 import { notes } from "@/lib/db/schema";
 import { noteSchema } from "@/lib/validation/note";
@@ -15,7 +15,7 @@ export type NoteActionResult = {
 };
 
 export async function createNoteAction(): Promise<NoteActionResult> {
-  const viewer = await requireViewer();
+  const viewer = await authorize("content.manage");
   const db = await getDb();
   const [created] = await db
     .insert(notes)
@@ -34,7 +34,7 @@ export async function createNoteAction(): Promise<NoteActionResult> {
 }
 
 export async function updateNoteAction(id: string, input: unknown): Promise<NoteActionResult> {
-  const viewer = await requireViewer();
+  const viewer = await authorize("content.manage");
   const parsed = noteSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the note." };
@@ -52,7 +52,7 @@ export async function updateNoteAction(id: string, input: unknown): Promise<Note
 }
 
 export async function deleteNoteAction(id: string): Promise<NoteActionResult> {
-  const viewer = await requireViewer();
+  const viewer = await authorize("content.manage");
   const db = await getDb();
   const [deleted] = await db
     .delete(notes)
@@ -64,3 +64,4 @@ export async function deleteNoteAction(id: string): Promise<NoteActionResult> {
   revalidatePath("/notes");
   return { ok: true };
 }
+

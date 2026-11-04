@@ -1,17 +1,29 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
-import { and, eq } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { getDb } from "@/lib/db";
-import { profiles, tickets, trackerFiles } from "@/lib/db/schema";
-import { isSupabaseAuthEnabled } from "@/lib/auth";
-import { assertAdmin } from "@/lib/auth/admin";
+import { auditLogs, profiles, roles, tickets, trackerFiles } from "@/lib/db/schema";
+import { isSupabaseAuthEnabled, type Viewer } from "@/lib/auth";
+import { authorize, getViewerRole } from "@/lib/auth/rbac";
+import {
+  canDeleteRole,
+  canModifyUser,
+  isValidRoleKey,
+  normalizePermissions,
+  slugifyRoleKey,
+  type RoleLike,
+} from "@/lib/rbac";
 import { deleteStoredFile } from "@/lib/storage";
 import {
+  adminProfileSchema,
+  createRoleSchema,
+  deleteRoleSchema,
   deleteUserSchema,
   ticketReplySchema,
+  updateRoleSchema,
   userRoleSchema,
   userStatusSchema,
 } from "@/lib/validation/admin";
@@ -35,16 +47,36 @@ function refreshAdmin() {
   revalidatePath("/dashboard");
 }
 
-/* -------------------------------------------------------------------------- */
-/* User support tickets                                                       */
-/* -------------------------------------------------------------------------- */
+async function writeAudit(
+  actor: Viewer,
+  action: string,
+  targetType: string,
+  targetId: string | null,
+  details: Record<string, unknown>,
+) {
+  const db = await getDb();
+  await db.insert(auditLogs).values({
+    actorId: actor.id,
+    actorEmail: actor.email,
+    action,
+    targetType,
+    targetId,
+    details,
+  });
+}
+
+async function ownerCount() {
+  const db = await getDb();
+  const rows = await db.select({ value: count() }).from(profiles).where(eq(profiles.role, "owner"));
+  return Number(rows[0]?.value ?? 0);
+}
 
 /* -------------------------------------------------------------------------- */
-/* Admin: tickets                                                             */
+/* Support tickets                                                            */
 /* -------------------------------------------------------------------------- */
 
 export async function replyTicketAction(input: unknown): Promise<AdminActionResult> {
-  const admin = await assertAdmin();
+  const actor = await authorize("support.manage");
   const parsed = ticketReplySchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the reply." };
@@ -57,7 +89,7 @@ export async function replyTicketAction(input: unknown): Promise<AdminActionResu
 
   const db = await getDb();
   const existing = await db
-    .select({ id: tickets.id })
+    .select({ id: tickets.id, status: tickets.status })
     .from(tickets)
     .where(eq(tickets.id, parsed.data.ticketId))
     .limit(1);
@@ -73,95 +105,122 @@ export async function replyTicketAction(input: unknown): Promise<AdminActionResu
     })
     .where(eq(tickets.id, parsed.data.ticketId));
 
+  await writeAudit(actor, "ticket.replied", "ticket", parsed.data.ticketId, {
+    from: existing[0].status,
+    to: parsed.data.status,
+    replied: reply !== "",
+  });
+
   refreshAdmin();
-  revalidatePath(`/admin?tab=tickets`);
   return {
     ok: true,
-    message: `Ticket ${parsed.data.status === "open" ? "reopened" : `marked ${parsed.data.status.replace("_", " ")}`} by ${admin.displayName}.`,
+    message: `Ticket ${parsed.data.status === "open" ? "reopened" : `marked ${parsed.data.status.replace("_", " ")}`} by ${actor.displayName}.`,
   };
 }
 
 export async function deleteTicketAction(input: unknown): Promise<AdminActionResult> {
-  await assertAdmin();
+  const actor = await authorize("support.manage");
   const parsed = ticketReplySchema.pick({ ticketId: true }).safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid ticket." };
 
   const db = await getDb();
   await db.delete(tickets).where(eq(tickets.id, parsed.data.ticketId));
+  await writeAudit(actor, "ticket.deleted", "ticket", parsed.data.ticketId, {});
   refreshAdmin();
   return { ok: true, message: "Ticket deleted." };
 }
 
 /* -------------------------------------------------------------------------- */
-/* Admin: users                                                               */
+/* Users                                                                      */
 /* -------------------------------------------------------------------------- */
 
-async function adminCount() {
-  const db = await getDb();
-  const rows = await db.select({ id: profiles.id }).from(profiles).where(eq(profiles.role, "admin"));
-  return rows.length;
-}
-
 export async function setUserRoleAction(input: unknown): Promise<AdminActionResult> {
-  const admin = await assertAdmin();
+  const actor = await authorize("roles.manage");
   const parsed = userRoleSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: "Choose a valid role." };
-  }
-  if (parsed.data.userId === admin.id && parsed.data.role !== "admin") {
-    return { ok: false, error: "You cannot remove your own administrator role." };
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Choose a valid role." };
   }
 
   const db = await getDb();
-  const target = await db
-    .select({ id: profiles.id, role: profiles.role })
+  const targetRows = await db
+    .select({ id: profiles.id, role: profiles.role, email: profiles.email, username: profiles.username })
     .from(profiles)
     .where(eq(profiles.id, parsed.data.userId))
     .limit(1);
-  if (!target[0]) return { ok: false, error: "That user no longer exists." };
+  const target = targetRows[0];
+  if (!target) return { ok: false, error: "That user no longer exists." };
 
-  if (target[0].role === "admin" && parsed.data.role === "user") {
-    const admins = await adminCount();
-    if (admins <= 1) return { ok: false, error: "At least one administrator must remain." };
-  }
+  const roleRows = await db
+    .select({ key: roles.key })
+    .from(roles)
+    .where(eq(roles.key, parsed.data.roleKey))
+    .limit(1);
+  if (!roleRows[0]) return { ok: false, error: "That role no longer exists." };
+
+  const actorRole = await getViewerRole(actor);
+  const targetRole: RoleLike = { key: target.role };
+  const lastOwner = target.role === "owner" ? (await ownerCount()) <= 1 : false;
+
+  const guard = canModifyUser({
+    action: "role",
+    actorId: actor.id,
+    actorRole,
+    targetId: target.id,
+    targetRole,
+    targetIsLastOwner: lastOwner,
+    nextRoleKey: parsed.data.roleKey,
+  });
+  if (!guard.allowed) return { ok: false, error: guard.reason };
 
   await db
     .update(profiles)
-    .set({ role: parsed.data.role, updatedAt: new Date() })
-    .where(eq(profiles.id, parsed.data.userId));
+    .set({ role: parsed.data.roleKey, updatedAt: new Date() })
+    .where(eq(profiles.id, target.id));
+
+  await writeAudit(actor, "user.role_changed", "user", target.id, {
+    from: target.role,
+    to: parsed.data.roleKey,
+    email: target.email,
+    username: target.username,
+  });
 
   refreshAdmin();
-  return {
-    ok: true,
-    message:
-      parsed.data.role === "admin"
-        ? "Administrator access granted."
-        : "Administrator access removed.",
-  };
+  return { ok: true, message: `Role changed to ${parsed.data.roleKey}.` };
 }
 
 export async function setUserStatusAction(input: unknown): Promise<AdminActionResult> {
-  const admin = await assertAdmin();
+  const actor = await authorize("users.manage");
   const parsed = userStatusSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: "Choose a valid account status." };
-  }
-  if (parsed.data.userId === admin.id) {
-    return { ok: false, error: "You cannot suspend your own account." };
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Choose a valid account status." };
   }
 
   const db = await getDb();
-  const target = await db
-    .select({ id: profiles.id })
+  const targetRows = await db
+    .select({ id: profiles.id, role: profiles.role, status: profiles.status, email: profiles.email })
     .from(profiles)
     .where(eq(profiles.id, parsed.data.userId))
     .limit(1);
-  if (!target[0]) return { ok: false, error: "That user no longer exists." };
+  const target = targetRows[0];
+  if (!target) return { ok: false, error: "That user no longer exists." };
+
+  const actorRole = await getViewerRole(actor);
+  const lastOwner = target.role === "owner" ? (await ownerCount()) <= 1 : false;
+  const guard = canModifyUser({
+    action: "status",
+    actorId: actor.id,
+    actorRole,
+    targetId: target.id,
+    targetRole: { key: target.role },
+    targetIsLastOwner: lastOwner,
+    nextStatus: parsed.data.status,
+  });
+  if (!guard.allowed) return { ok: false, error: guard.reason };
 
   await db
     .update(profiles)
     .set({ status: parsed.data.status, updatedAt: new Date() })
-    .where(eq(profiles.id, parsed.data.userId));
+    .where(eq(profiles.id, target.id));
 
   if (isSupabaseAuthEnabled()) {
     const client = supabaseAdminClient();
@@ -174,6 +233,12 @@ export async function setUserStatusAction(input: unknown): Promise<AdminActionRe
     }
   }
 
+  await writeAudit(actor, "user.status_changed", "user", target.id, {
+    from: target.status,
+    to: parsed.data.status,
+    email: target.email,
+  });
+
   refreshAdmin();
   return {
     ok: true,
@@ -184,44 +249,203 @@ export async function setUserStatusAction(input: unknown): Promise<AdminActionRe
   };
 }
 
-export async function deleteUserAction(input: unknown): Promise<AdminActionResult> {
-  const admin = await assertAdmin();
-  const parsed = deleteUserSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "Type DELETE to confirm." };
-  if (parsed.data.confirmation !== "DELETE") {
-    return { ok: false, error: "Type DELETE to confirm." };
-  }
-  if (parsed.data.userId === admin.id) {
-    return { ok: false, error: "Use Settings → Account to delete your own account." };
+export async function updateUserProfileAction(input: unknown): Promise<AdminActionResult> {
+  const actor = await authorize("users.manage");
+  const parsed = adminProfileSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the profile details." };
   }
 
   const db = await getDb();
-  const target = await db
+  const targetRows = await db
+    .select({
+      id: profiles.id,
+      displayName: profiles.displayName,
+      username: profiles.username,
+      githubUsername: profiles.githubUsername,
+    })
+    .from(profiles)
+    .where(eq(profiles.id, parsed.data.userId))
+    .limit(1);
+  const target = targetRows[0];
+  if (!target) return { ok: false, error: "That user no longer exists." };
+
+  const duplicate = await db
     .select({ id: profiles.id })
     .from(profiles)
-    .where(and(eq(profiles.id, parsed.data.userId)))
+    .where(eq(profiles.username, parsed.data.username))
     .limit(1);
-  if (!target[0]) return { ok: false, error: "That user no longer exists." };
+  if (duplicate[0] && duplicate[0].id !== target.id) {
+    return { ok: false, error: "That username is already taken." };
+  }
+
+  const githubUsername = parsed.data.githubUsername?.replace(/^@/, "") || null;
+  await db
+    .update(profiles)
+    .set({
+      displayName: parsed.data.displayName,
+      username: parsed.data.username,
+      bio: parsed.data.bio,
+      githubUsername,
+      updatedAt: new Date(),
+    })
+    .where(eq(profiles.id, target.id));
+
+  await writeAudit(actor, "user.profile_updated", "user", target.id, {
+    displayName: { from: target.displayName, to: parsed.data.displayName },
+    username: { from: target.username, to: parsed.data.username },
+    githubUsername: { from: target.githubUsername, to: githubUsername },
+  });
+
+  refreshAdmin();
+  return { ok: true, message: "Profile updated." };
+}
+
+export async function deleteUserAction(input: unknown): Promise<AdminActionResult> {
+  const actor = await authorize("users.manage");
+  const parsed = deleteUserSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Type DELETE to confirm." };
+  if (parsed.data.confirmation !== "DELETE") return { ok: false, error: "Type DELETE to confirm." };
+
+  const db = await getDb();
+  const targetRows = await db
+    .select({ id: profiles.id, role: profiles.role, email: profiles.email, username: profiles.username })
+    .from(profiles)
+    .where(eq(profiles.id, parsed.data.userId))
+    .limit(1);
+  const target = targetRows[0];
+  if (!target) return { ok: false, error: "That user no longer exists." };
+
+  const actorRole = await getViewerRole(actor);
+  const lastOwner = target.role === "owner" ? (await ownerCount()) <= 1 : false;
+  const guard = canModifyUser({
+    action: "delete",
+    actorId: actor.id,
+    actorRole,
+    targetId: target.id,
+    targetRole: { key: target.role },
+    targetIsLastOwner: lastOwner,
+  });
+  if (!guard.allowed) return { ok: false, error: guard.reason };
 
   if (isSupabaseAuthEnabled()) {
     const client = supabaseAdminClient();
     if (!client) {
       return { ok: false, error: "SUPABASE_SERVICE_ROLE_KEY is required to delete accounts." };
     }
-    const { error } = await client.auth.admin.deleteUser(parsed.data.userId);
+    const { error } = await client.auth.admin.deleteUser(target.id);
     if (error) return { ok: false, error: "Could not delete the authentication account." };
   }
 
   const files = await db
     .select({ storagePath: trackerFiles.storagePath })
     .from(trackerFiles)
-    .where(eq(trackerFiles.userId, parsed.data.userId));
+    .where(eq(trackerFiles.userId, target.id));
   for (const file of files) {
     if (file.storagePath) await deleteStoredFile(file.storagePath).catch(() => {});
   }
 
-  await db.delete(profiles).where(eq(profiles.id, parsed.data.userId));
+  await db.delete(profiles).where(eq(profiles.id, target.id));
+  await writeAudit(actor, "user.deleted", "user", target.id, {
+    email: target.email,
+    username: target.username,
+    role: target.role,
+  });
+
   refreshAdmin();
   return { ok: true, message: "User and all owned records deleted." };
 }
 
+/* -------------------------------------------------------------------------- */
+/* Roles                                                                      */
+/* -------------------------------------------------------------------------- */
+
+export async function createRoleAction(input: unknown): Promise<AdminActionResult> {
+  const actor = await authorize("roles.manage");
+  const parsed = createRoleSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the role details." };
+  }
+
+  const rawKey = parsed.data.key?.trim() || slugifyRoleKey(parsed.data.name);
+  if (!isValidRoleKey(rawKey)) {
+    return { ok: false, error: "The generated role key is not valid. Use a different name." };
+  }
+
+  const db = await getDb();
+  const existing = await db.select({ key: roles.key }).from(roles).where(eq(roles.key, rawKey)).limit(1);
+  if (existing[0]) return { ok: false, error: "A role with that key already exists." };
+
+  await db.insert(roles).values({
+    key: rawKey,
+    name: parsed.data.name,
+    description: parsed.data.description,
+    permissions: normalizePermissions(parsed.data.permissions),
+    isSystem: false,
+  });
+
+  await writeAudit(actor, "role.created", "role", rawKey, {
+    name: parsed.data.name,
+    permissions: parsed.data.permissions,
+  });
+  refreshAdmin();
+  return { ok: true, message: "Role created." };
+}
+
+export async function updateRoleAction(input: unknown): Promise<AdminActionResult> {
+  const actor = await authorize("roles.manage");
+  const parsed = updateRoleSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the role details." };
+  }
+
+  const db = await getDb();
+  const existingRows = await db.select().from(roles).where(eq(roles.key, parsed.data.key)).limit(1);
+  const existing = existingRows[0];
+  if (!existing) return { ok: false, error: "That role no longer exists." };
+  if (existing.key === "owner") {
+    return { ok: false, error: "The Owner role always keeps every permission and cannot be edited." };
+  }
+
+  await db
+    .update(roles)
+    .set({
+      name: parsed.data.name,
+      description: parsed.data.description,
+      permissions: normalizePermissions(parsed.data.permissions),
+      updatedAt: new Date(),
+    })
+    .where(eq(roles.key, parsed.data.key));
+
+  await writeAudit(actor, "role.updated", "role", parsed.data.key, {
+    name: { from: existing.name, to: parsed.data.name },
+    permissions: { from: existing.permissions, to: parsed.data.permissions },
+  });
+  refreshAdmin();
+  return { ok: true, message: "Role updated." };
+}
+
+export async function deleteRoleAction(input: unknown): Promise<AdminActionResult> {
+  const actor = await authorize("roles.manage");
+  const parsed = deleteRoleSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Choose a valid role." };
+
+  const db = await getDb();
+  const existingRows = await db.select().from(roles).where(eq(roles.key, parsed.data.key)).limit(1);
+  const existing = existingRows[0];
+  if (!existing) return { ok: false, error: "That role no longer exists." };
+
+  const assignedRows = await db
+    .select({ value: count() })
+    .from(profiles)
+    .where(eq(profiles.role, parsed.data.key));
+  const assigned = Number(assignedRows[0]?.value ?? 0);
+
+  const guard = canDeleteRole(existing, assigned);
+  if (!guard.allowed) return { ok: false, error: guard.reason };
+
+  await db.delete(roles).where(eq(roles.key, parsed.data.key));
+  await writeAudit(actor, "role.deleted", "role", parsed.data.key, { name: existing.name });
+  refreshAdmin();
+  return { ok: true, message: "Role deleted." };
+}

@@ -577,7 +577,7 @@ export async function seedLocalWorkspace(db: AppDatabase) {
       avatarUrl: null,
       bio: "Developer, problem solver, lifelong learner.",
       email: DEMO_EMAIL,
-      role: "admin",
+      role: "owner",
       status: "active",
       githubUsername: "davidcosmatech",
       githubCache: demoGitHubCache,
@@ -650,3 +650,4 @@ export async function seedLocalWorkspace(db: AppDatabase) {
 }
 
 export const demoCredentials = { email: DEMO_EMAIL, password: DEMO_PASSWORD };
+

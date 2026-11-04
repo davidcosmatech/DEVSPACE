@@ -43,15 +43,18 @@ The local provider cannot be activated accidentally when Supabase is configured:
 - Downloads recheck both the file id and the owner before touching storage.
 - Supabase RLS mirrors these rules for any direct client access.
 
-## Admin console
+## Admin console and RBAC
 
-- `/admin` and every admin action call `requireAdminViewer()` / `assertAdmin()` on the server; the sidebar link is only a convenience.
-- Access requires `profiles.role = 'admin'`. There is no email or environment allow-list, and the header/sidebar links are only rendered for admins.
-- Admins cannot demote, suspend or delete their own account, and the last administrator cannot be demoted.
+- Every admin page loads the viewer's role from the database and requires the matching permission (`analytics.view`, `users.manage`, `roles.manage`, `support.manage`); every action re-checks it with `authorize()` before touching data. Sidebar and header entries are only a convenience.
+- Content mutations (projects, notes, workspaces, tracker, upload, import) require `content.manage` on the server; the Owner role always has every permission.
+- Only `roles.manage` may assign roles; only an Owner may grant or revoke the Owner role. Nobody can change their own role, status or delete their own account from the console.
+- The last Owner cannot be demoted, suspended or deleted. System roles cannot be edited into removal or deleted; custom roles can only be deleted when no user holds them.
+- Role keys, permission values and profile edits are validated with Zod and against the canonical permission list before writing.
+- Every role, status, profile and deletion change is appended to `audit_logs` with a copy of the actor's email and before/after values.
+- `roles` and `audit_logs` have RLS enabled with no policies; `profiles.role` and `profiles.status` are revoked from `authenticated`/`anon`, so role escalation or log tampering is impossible without the server connection.
 - Suspended viewers are redirected to `/suspended`; local sign-in is rejected and Supabase accounts are banned through the Admin API.
 - Account deletion requires the `DELETE` confirmation phrase, removes the Auth identity first, then cascades profile data and deletes the user's stored files.
 - `tickets` has RLS enabled with owner-only policies, so a browser client can only read or create its own tickets.
-- `profiles.role` and `profiles.status` are revoked from `authenticated`/`anon`, so role escalation is impossible without the server connection.
 
 ## Usage metrics
 

@@ -42,12 +42,18 @@ export type WorkspaceWithLinks = Workspace & {
   projects: { id: string; name: string; status: string }[];
 };
 
-export function WorkspacesView({ workspaces }: { workspaces: WorkspaceWithLinks[] }) {
+export function WorkspacesView({
+  workspaces,
+  initialNew = false,
+}: {
+  workspaces: WorkspaceWithLinks[];
+  initialNew?: boolean;
+}) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [workspaceModal, setWorkspaceModal] = useState<{ open: boolean; workspace: Workspace | null }>({
-    open: false,
+    open: initialNew,
     workspace: null,
   });
   const [linkModal, setLinkModal] = useState<{

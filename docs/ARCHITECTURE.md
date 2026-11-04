@@ -138,21 +138,32 @@ The header chat button opens a read-only assistant. `POST /api/assistant` valida
 
 The browser sandbox intentionally prevents launching Windows Explorer, Word, PDF Reader or VS Code. Folders navigate inside DEVSPACE and supported documents preview in a modal; unsupported formats can be opened in a browser tab. Chrome/Edge over HTTPS (or localhost) is required.
 
-## Admin console and support
+## Admin console, RBAC and support
 
-`/admin` is a restricted area with three views:
+`/admin` is a restricted area with four views: **Overview**, **People**, **Roles** and **Tickets**.
 
-- **Overview** — people, active today, active this week, new signups this week and the support queue size, plus product totals (projects, notes, tickets, admins, suspensions) and recent activity.
-- **People** — searchable account list with per-user project/note/ticket counts, last-seen time, promote/demote, suspend/reactivate and a typed-`DELETE` account deletion.
-- **Tickets** — the support queue with status filters, the full message, an administrator reply and status changes.
+- **Overview** — interactive statistics (people, active today, active this week, new signups, awaiting replies). Each card links to the matching filtered detail view. Product totals come from the same database rows.
+- **People** — server-side search (name, username, email), role/status/activity filters, sort (newest, oldest, name, last active) and pagination. Each row opens a full profile: user ID, username, email, bio, GitHub, created, last active, role, status, content counts, recent activity, inline editing of permitted fields, role assignment, suspend/reactivate and typed-`DELETE` deletion.
+- **Roles** — the six system roles plus custom roles, each with a configurable permission set. Roles show how many users hold them. System roles cannot be deleted; custom roles can only be deleted when unused.
+- **Tickets** — the support queue with status filters, full message, reply and status changes.
+
+### Permission model
+
+`src/lib/rbac.ts` defines the canonical permission keys and pure decision helpers; `src/lib/auth/rbac.ts` loads the viewer's role from the database and exposes `requirePermission` (page redirect), `authorize` (server action throws), `requireAdminArea` and `authorizeAdminArea`. Permissions are `dashboard.view`, `analytics.view`, `users.manage`, `roles.manage`, `content.manage`, `support.manage` and `settings.manage`. The Owner role always has every permission.
+
+The server is the only authority: every admin page and action checks the database role, content mutations require `content.manage`, uploads and backup imports re-check it in route handlers, and the sidebar/header links are rendered only as a convenience. A visitor without the required permission is redirected to the dashboard; an action throws before touching data.
+
+Protection rules (pure, unit-tested in `canModifyUser`): nobody can change their own role/status or delete their own account from the console; the last Owner cannot be demoted, suspended or deleted; only an Owner may modify another Owner or grant the Owner role. Role changes are validated against existing role keys.
+
+Every administrative mutation appends to `audit_logs` with the actor snapshot, action, target and before/after details. The audit log is visible on the Roles view and in each user profile.
 
 Activity is measured without third-party analytics: `requireViewer()` refreshes `profiles.last_seen_at` at most once every five minutes per user. Daily/weekly totals are derived from that column; no tracking scripts or cookies are involved.
-
-Every page calls `requireAdminViewer()` and every action calls `assertAdmin()`. Authorisation is the database `profiles.role = 'admin'` — there is no email allow-list, so only explicitly promoted accounts can open the console. Non-admins are redirected to the dashboard and actions throw.
 
 Suspension is enforced server-side: suspended viewers are redirected to `/suspended`, local sign-in is rejected, and Supabase accounts are additionally banned through the Admin API. Deleting a user removes the Supabase Auth identity, the cascaded profile data and the user's stored files.
 
 Users reach `/support` from a **My Tickets** sidebar entry (visible to every account) or the account menu. The sidebar shows a counter for open/in-progress tickets, and administrator replies surface in the notification bell. They create a ticket (subject, priority, message) and see the administrator's reply and current status; they can never read another user's tickets.
+
+`/new` is a quick-create hub that links to the note, project, workspace, local-file and support flows. Projects and workspaces accept `?new=1` to open their create dialog directly.
 
 ## Keyboard and focus
 
@@ -210,9 +221,10 @@ Any genuinely unknown path renders the global `not-found.tsx` card: it shows the
 | `lib/storage` | Private local/Supabase file operations |
 | `lib/github` | GitHub REST client, public + token-gated private repositories, error classification |
 | `lib/github-private` | Pure private-repository access rules and summaries (unit tested) |
-| `lib/admin` | Pure admin/usage/ticket helpers and labels (unit tested) |
-| `lib/auth/admin` | Server-side admin gate (`requireAdminViewer`, `assertAdmin`) |
-| `features/admin` | Admin queries, actions and console UI |
+| `lib/admin` | Pure usage/ticket helpers and labels (unit tested) |
+| `lib/rbac` | Permission model, role templates and user-protection rules (unit tested) |
+| `lib/auth/rbac` | Server-side permission guards and role loading |
+| `features/admin` | Admin queries, RBAC actions, audit trail and console UI |
 | `features/support` | Ticket creation action and user support UI |
 | `app/api/assistant` | Read-only workspace chat answers |
 | `features/*/actions.ts` | Authorized mutations |

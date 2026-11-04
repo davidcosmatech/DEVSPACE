@@ -49,7 +49,7 @@ export function ForgotPasswordForm() {
       <h2>Reset your password</h2>
       <p>Enter the email address linked to your workspace.</p>
 
-      <form className="auth-form" onSubmit={handleSubmit(submit)} noValidate>
+      <form className="auth-form" method="post" onSubmit={handleSubmit(submit)} noValidate>
         {serverError ? (
           <div className="form-error" role="alert">
             <AlertCircle size={15} />
@@ -98,3 +98,4 @@ export function ForgotPasswordForm() {
     </>
   );
 }
+

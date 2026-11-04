@@ -60,7 +60,7 @@ export function RegisterForm() {
       <h2>Create your workspace</h2>
       <p>Free to start. Your data stays private to your account.</p>
 
-      <form className="auth-form" onSubmit={handleSubmit(submit)} noValidate>
+      <form className="auth-form" method="post" onSubmit={handleSubmit(submit)} noValidate>
         {serverError ? (
           <div className="form-error" role="alert">
             <AlertCircle size={15} />
@@ -188,3 +188,4 @@ export function RegisterForm() {
     </>
   );
 }
+

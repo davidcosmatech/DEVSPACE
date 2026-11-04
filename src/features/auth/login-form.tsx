@@ -78,7 +78,7 @@ export function LoginForm({
       <h2>Welcome back</h2>
       <p>Sign in to pick up where you left off.</p>
 
-      <form className="auth-form" onSubmit={handleSubmit(submit)} noValidate>
+      <form className="auth-form" method="post" onSubmit={handleSubmit(submit)} noValidate>
         {serverError ? (
           <div className="form-error" role="alert">
             <AlertCircle size={15} />
@@ -174,3 +174,4 @@ export function LoginForm({
     </>
   );
 }
+

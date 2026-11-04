@@ -61,7 +61,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
       <h2>Choose a new password</h2>
       <p>Make it strong and unique to DEVSPACE.</p>
 
-      <form className="auth-form" onSubmit={handleSubmit(submit)} noValidate>
+      <form className="auth-form" method="post" onSubmit={handleSubmit(submit)} noValidate>
         {serverError ? (
           <div className="form-error" role="alert">
             <AlertCircle size={15} />
@@ -114,3 +114,4 @@ export function ResetPasswordForm({ token }: { token: string }) {
     </>
   );
 }
+

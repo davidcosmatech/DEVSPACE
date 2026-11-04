@@ -45,6 +45,17 @@ export const deleteUserSchema = z.object({
   confirmation: z.string().min(1, "Type DELETE to confirm."),
 });
 
+export const adminEmailSchema = z.object({
+  userId: z.string().uuid(),
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(5, "Enter a valid email address.")
+    .max(254, "Email address is too long.")
+    .email("Enter a valid email address."),
+});
+
 export const adminProfileSchema = z.object({
   userId: z.string().uuid(),
   displayName: z.string().trim().min(2, "Enter a display name.").max(80, "Name is too long."),

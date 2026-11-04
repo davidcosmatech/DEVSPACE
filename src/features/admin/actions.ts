@@ -5,8 +5,8 @@ import { count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { getDb } from "@/lib/db";
-import { auditLogs, profiles, roles, tickets, trackerFiles } from "@/lib/db/schema";
-import { isSupabaseAuthEnabled, type Viewer } from "@/lib/auth";
+import { auditLogs, localAccounts, profiles, roles, tickets, trackerFiles } from "@/lib/db/schema";
+import { createSupabaseServerClient, isSupabaseAuthEnabled, type Viewer } from "@/lib/auth";
 import { authorize, getViewerRole } from "@/lib/auth/rbac";
 import {
   canDeleteRole,
@@ -18,6 +18,7 @@ import {
 } from "@/lib/rbac";
 import { deleteStoredFile } from "@/lib/storage";
 import {
+  adminEmailSchema,
   adminProfileSchema,
   createRoleSchema,
   deleteRoleSchema,
@@ -301,6 +302,111 @@ export async function updateUserProfileAction(input: unknown): Promise<AdminActi
   return { ok: true, message: "Profile updated." };
 }
 
+/**
+ * Updates the Supabase Auth login email without changing the Auth UUID, so the
+ * profile and every owned record stay attached. The service-role key never
+ * leaves the server; only administrators with `users.manage` can call this.
+ */
+export async function updateUserEmailAction(input: unknown): Promise<AdminActionResult> {
+  const actor = await authorize("users.manage");
+  const parsed = adminEmailSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Enter a valid email address." };
+  }
+
+  const email = parsed.data.email;
+  const db = await getDb();
+  const targetRows = await db
+    .select({ id: profiles.id, email: profiles.email })
+    .from(profiles)
+    .where(eq(profiles.id, parsed.data.userId))
+    .limit(1);
+  const target = targetRows[0];
+  if (!target) return { ok: false, error: "That user no longer exists." };
+
+  const conflict = await db
+    .select({ id: profiles.id })
+    .from(profiles)
+    .where(eq(profiles.email, email))
+    .limit(1);
+  if (conflict[0] && conflict[0].id !== target.id) {
+    return { ok: false, error: "That email address is already used by another account." };
+  }
+
+  if (isSupabaseAuthEnabled()) {
+    const client = supabaseAdminClient();
+    if (!client) {
+      return {
+        ok: false,
+        error: "SUPABASE_SERVICE_ROLE_KEY is required on the server to change login emails.",
+      };
+    }
+
+    const authUser = await client.auth.admin.getUserById(target.id);
+    if (authUser.error || !authUser.data.user) {
+      return { ok: false, error: "The Supabase Auth account could not be loaded." };
+    }
+
+    if (authUser.data.user.email !== email) {
+      const { error } = await client.auth.admin.updateUserById(target.id, {
+        email,
+        // Custom SMTP is not configured, so the new address is confirmed by the
+        // admin operation. Set this to false to send a verification email once
+        // SMTP and the Auth URL configuration are in place.
+        email_confirm: true,
+      });
+      if (error) {
+        const message = error.message.toLowerCase();
+        if (message.includes("already") || message.includes("registered") || message.includes("exists")) {
+          return { ok: false, error: "That email address is already registered in Supabase Auth." };
+        }
+        return { ok: false, error: error.message };
+      }
+    }
+  } else {
+    const localConflict = await db
+      .select({ id: localAccounts.id })
+      .from(localAccounts)
+      .where(eq(localAccounts.email, email))
+      .limit(1);
+    if (localConflict[0] && localConflict[0].id !== target.id) {
+      return { ok: false, error: "That email address is already used by another account." };
+    }
+    await db.update(localAccounts).set({ email }).where(eq(localAccounts.id, target.id));
+  }
+
+  await db
+    .update(profiles)
+    .set({ email, updatedAt: new Date() })
+    .where(eq(profiles.id, target.id));
+
+  await writeAudit(actor, "user.email_changed", "user", target.id, {
+    from: target.email,
+    to: email,
+  });
+
+  let sessionRefreshed = false;
+  if (actor.id === target.id && isSupabaseAuthEnabled()) {
+    const supabase = await createSupabaseServerClient();
+    if (supabase) {
+      const { error } = await supabase.auth.refreshSession();
+      sessionRefreshed = !error;
+    }
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/settings");
+  revalidatePath("/dashboard");
+
+  return {
+    ok: true,
+    message:
+      sessionRefreshed
+        ? `Login email updated to ${email}. Your session was refreshed.`
+        : `Login email updated to ${email}.${actor.id === target.id ? " Sign in again if your session shows the old address." : ""}`,
+  };
+}
+
 export async function deleteUserAction(input: unknown): Promise<AdminActionResult> {
   const actor = await authorize("users.manage");
   const parsed = deleteUserSchema.safeParse(input);
@@ -449,3 +555,4 @@ export async function deleteRoleAction(input: unknown): Promise<AdminActionResul
   refreshAdmin();
   return { ok: true, message: "Role deleted." };
 }
+

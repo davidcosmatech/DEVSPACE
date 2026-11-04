@@ -8,6 +8,7 @@ import {
   ticketStatusLabels,
 } from "@/lib/admin";
 import {
+  adminEmailSchema,
   deleteUserSchema,
   ticketReplySchema,
   ticketSchema,
@@ -140,6 +141,27 @@ describe("admin user validation", () => {
   });
 });
 
+describe("login email validation", () => {
+  it("normalises and accepts a valid address", () => {
+    const parsed = adminEmailSchema.safeParse({
+      userId: "3f2c9a1e-1d6b-4f4a-9c3e-8a7b6d5c4e2f",
+      email: "  Admin@Devspace.App ",
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.email).toBe("admin@devspace.app");
+  });
+
+  it("rejects malformed addresses and invalid ids", () => {
+    expect(adminEmailSchema.safeParse({ userId: "not-a-uuid", email: "admin@devspace.app" }).success).toBe(false);
+    expect(
+      adminEmailSchema.safeParse({
+        userId: "3f2c9a1e-1d6b-4f4a-9c3e-8a7b6d5c4e2f",
+        email: "not-an-email",
+      }).success,
+    ).toBe(false);
+  });
+});
+
 describe("ticket labels", () => {
   it("keeps every status and priority labelled", () => {
     expect(ticketStatusLabels.open).toBe("Open");
@@ -147,4 +169,5 @@ describe("ticket labels", () => {
     expect(ticketPriorityLabels.urgent).toBe("Urgent");
   });
 });
+
 

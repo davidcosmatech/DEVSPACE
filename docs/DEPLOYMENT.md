@@ -219,6 +219,18 @@ update profiles set role = 'owner' where email = 'owner@example.com';
 
 `profiles.role` is revoked from `authenticated`/`anon`, so the role can only be changed by the server connection or the SQL editor. Remove it with the same statement using `'member'`; the last Owner cannot be demoted from the UI.
 
+### Changing a login email
+
+1. Sign in as an administrator whose role includes `users.manage`.
+2. Open **Admin console → User management**, search for the account and open its profile.
+3. Under **Login email**, enter the new address and click **Update email**.
+4. The server calls `supabase.auth.admin.updateUserById()` with the existing Auth UUID, updates `profiles.email`, confirms the address (`email_confirm: true`), refreshes the administrator's own session when applicable, and writes a `user.email_changed` audit entry.
+5. Sign out and back in with the new address to confirm the change. The old address stops working.
+
+`SUPABASE_SERVICE_ROLE_KEY` must exist in the server environment (it already does in Vercel); it is never sent to the browser. To require email verification once custom SMTP and the Supabase Auth URLs are configured, change `email_confirm` to `false` in `src/features/admin/actions.ts`.
+
+The production owner login email is now `admin@devspace.app` (password unchanged); the Auth UUID and all owned records were preserved.
+
 ### Remaining dashboard step
 
 Registration now creates confirmed users through the Admin API, so the previous “email rate limit exceeded” error no longer blocks signup. Password-reset emails still require Supabase URL configuration and a working mail provider. In **Supabase → Authentication → URL Configuration**:
@@ -246,7 +258,7 @@ GitHub `main` still contains the previous static prototype. The full application
 
 - `npm run typecheck` — passed.
 - `npm run lint` — passed.
-- `npm test` — 63/63 tests passed.
+- `npm test` — 65/65 tests passed.
 - `npm run test:e2e` — 13/13 Playwright flows passed locally.
 - `npm run build` — passed (Next.js 16.4.5).
 - Supabase-mode browser test — login, project CRUD, note autosave/reload, workspace/link CRUD, private Storage upload/download/delete, theme persistence and export passed.

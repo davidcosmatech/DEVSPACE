@@ -56,6 +56,17 @@ The local provider cannot be activated accidentally when Supabase is configured:
 - Account deletion requires the `DELETE` confirmation phrase, removes the Auth identity first, then cascades profile data and deletes the user's stored files.
 - `tickets` has RLS enabled with owner-only policies, so a browser client can only read or create its own tickets.
 
+## Login email changes
+
+- Only administrators with `users.manage` can change a login email; the action re-checks the database role before running.
+- The change uses `supabase.auth.admin.updateUserById()` with the existing Auth UUID, so the profile and every owned record stay attached.
+- The service-role key is read from the server environment inside the Server Action; it is never sent to the browser, logged or exposed in a route.
+- The new address is validated with Zod, normalised to lowercase and checked against existing profiles before the Auth update. Supabase also rejects an address that is already registered, and that error is surfaced as a clear message.
+- `email_confirm: true` marks the address confirmed because custom SMTP is not configured. Once SMTP and Auth URLs are configured, set it to `false` to require the user to verify the new address.
+- When the administrator changes their own address, the server calls `supabase.auth.refreshSession()` so the new email claim is written back into the session cookies. Another user's existing session picks up the address on its next refresh.
+- Every change is recorded as `user.email_changed` in `audit_logs` with the previous and new address.
+- The profile copy in `profiles.email` is updated in the same operation so the admin console and support views stay consistent.
+
 ## Usage metrics
 
 - Presence is derived from `profiles.last_seen_at`, refreshed at most once every five minutes per viewer.

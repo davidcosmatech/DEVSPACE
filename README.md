@@ -20,14 +20,14 @@ DEVSPACE is a working Next.js application — not a static dashboard mock-up. Ev
 - **Markdown Tracker** — real file uploads with byte-level progress, private per-user storage, inline Markdown preview, download, pending records and deletion.
 - **Workspace chat** — a header chat assistant that answers questions from the signed-in user's real projects, notes, workspaces, files and GitHub status.
 - **Support tickets** — a **My Tickets** section in the sidebar (with an open-ticket counter) plus `/support`, where every user can open a ticket and follow the administrator reply and status. Replies also appear in the notification bell.
-- **Admin console & RBAC** — role-based access with Owner, Admin, Moderator, Editor, Member, Viewer and custom roles. Clickable analytics (people, active today/week, new signups, awaiting replies), searchable/sortable/paginated user management with full profiles and activity, role and permission editing, and an append-only audit log. Every permission is enforced on the server; a shield shortcut sits next to the header bell.
+- **Admin console & RBAC** — role-based access with Owner, Admin, Moderator, Editor, Member, Viewer and custom roles. Clickable analytics (people, active today/week, new signups, awaiting replies), searchable/sortable/paginated user management with full profiles and activity, role and permission editing, login-email changes through the Supabase Admin API, and an append-only audit log. Every permission is enforced on the server; a shield shortcut sits next to the header bell.
 - **Quick create** — `/new` opens a create hub for notes, projects, workspaces, local files and support tickets, also reachable from the command palette.
 - **Header tools** — global search/command palette, notifications, admin shortcut (permitted staff only), account menu, workspace chat and a live local clock.
 - **Settings** — profile and avatar management, persistent dark/light themes, locale preference, JSON export, safe import preview and account deletion.
 - **Backup & restore** — versioned JSON format, duplicate detection, no cross-account overwrite, transactional import.
 - **Responsive design** — fixed desktop sidebar, drawer navigation on mobile, single-column cards, responsive tables and touch-friendly controls.
 - **Security** — server-derived ownership on every query, Zod validation, secure HttpOnly sessions, RLS policies for Supabase and private file storage.
-- **Quality gates** — TypeScript, ESLint, 63 unit/integration tests, 13 Playwright end-to-end tests and a production build.
+- **Quality gates** — TypeScript, ESLint, 65 unit/integration tests, 13 Playwright end-to-end tests and a production build.
 
 ## Demo
 
@@ -271,6 +271,7 @@ One dashboard-only step remains for new user registration and password reset ema
 ## License
 
 Private project. All rights reserved.
+
 
 
 

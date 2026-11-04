@@ -37,6 +37,7 @@ import {
   setUserRoleAction,
   setUserStatusAction,
   updateRoleAction,
+  updateUserEmailAction,
   updateUserProfileAction,
 } from "@/features/admin/actions";
 import type {
@@ -217,6 +218,15 @@ export function AdminView({
     setSaving(false);
     if (!result.ok) return toast.error(result.error ?? "Could not change the status.");
     toast.success(result.message ?? "Account updated.");
+    refresh();
+  }
+
+  async function changeUserEmail(userId: string, email: string) {
+    setSaving(true);
+    const result = await updateUserEmailAction({ userId, email });
+    setSaving(false);
+    if (!result.ok) return toast.error(result.error ?? "Could not update the login email.");
+    toast.success(result.message ?? "Login email updated.");
     refresh();
   }
 
@@ -590,6 +600,7 @@ export function AdminView({
               onClose={() => router.push(usersHref({ user: undefined }))}
               onSaveProfile={saveProfile}
               onChangeRole={changeUserRole}
+              onChangeEmail={changeUserEmail}
               onToggleStatus={changeUserStatus}
               onDelete={removeUser}
             />
@@ -1017,6 +1028,7 @@ function UserDetailModal({
   onClose,
   onSaveProfile,
   onChangeRole,
+  onChangeEmail,
   onToggleStatus,
   onDelete,
 }: {
@@ -1029,10 +1041,12 @@ function UserDetailModal({
   onClose: () => void;
   onSaveProfile: (event: React.FormEvent<HTMLFormElement>, userId: string) => void;
   onChangeRole: (userId: string, roleKey: string) => void;
+  onChangeEmail: (userId: string, email: string) => void;
   onToggleStatus: (user: AdminUserRow) => void;
   onDelete: (userId: string, confirmation: string) => void;
 }) {
   const [roleKey, setRoleKey] = useState(detail.role);
+  const [email, setEmail] = useState(detail.email ?? "");
   const [confirmation, setConfirmation] = useState("");
   const canManageRoles = permissions.includes("roles.manage");
   const isSelf = detail.id === actorId;
@@ -1160,6 +1174,36 @@ function UserDetailModal({
         </section>
 
         <section className="admin-detail-section">
+          <h4>Login email</h4>
+          <p className="admin-muted">
+            Used to sign in through Supabase Auth. The Auth UUID and every owned record stay
+            attached.
+          </p>
+          <div className="admin-detail-inline">
+            <input
+              className="input"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              aria-label="Login email"
+              autoComplete="off"
+            />
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              disabled={saving || email.trim().toLowerCase() === (detail.email ?? "").toLowerCase()}
+              onClick={() => onChangeEmail(detail.id, email.trim().toLowerCase())}
+            >
+              <ShieldCheck size={14} /> Update email
+            </button>
+          </div>
+          <p className="admin-muted">
+            The new address is confirmed immediately because custom SMTP is not configured. If you
+            change your own address, the session is refreshed automatically.
+          </p>
+        </section>
+
+        <section className="admin-detail-section">
           <h4>Edit permitted information</h4>
           <form className="admin-edit-form" onSubmit={(event) => onSaveProfile(event, detail.id)}>
             <div className="field">
@@ -1241,5 +1285,6 @@ function UserDetailModal({
     </Modal>
   );
 }
+
 
 

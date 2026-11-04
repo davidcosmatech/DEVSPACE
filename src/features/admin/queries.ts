@@ -4,7 +4,6 @@ import { count, desc, eq, ilike, or } from "drizzle-orm";
 
 import {
   isAdminUser,
-  parseAdminEmails,
   summarizeTicketQueue,
   summarizeUsers,
   type TicketPriority,
@@ -94,7 +93,7 @@ async function loadUsers(search?: string): Promise<AdminUserRow[]> {
     username: row.username,
     email: row.email,
     avatarUrl: row.avatarUrl,
-    role: isAdminUser(row, parseAdminEmails(process.env.ADMIN_EMAILS)) ? "admin" : row.role,
+    role: isAdminUser(row) ? "admin" : row.role,
     status: row.status,
     createdAt: row.createdAt,
     lastSeenAt: row.lastSeenAt,

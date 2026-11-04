@@ -279,6 +279,16 @@ function Header({
         <HeaderClock />
 
         <div className="topbar-right">
+          {isAdmin ? (
+            <Link
+              href="/admin"
+              className="icon-button admin-header-button"
+              aria-label="Admin console"
+              title="Admin console"
+            >
+              <ShieldCheck size={18} />
+            </Link>
+          ) : null}
           <div ref={bellRef} style={{ position: "relative" }}>
             <button
               type="button"

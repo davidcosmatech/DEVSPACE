@@ -148,7 +148,7 @@ The browser sandbox intentionally prevents launching Windows Explorer, Word, PDF
 
 Activity is measured without third-party analytics: `requireViewer()` refreshes `profiles.last_seen_at` at most once every five minutes per user. Daily/weekly totals are derived from that column; no tracking scripts or cookies are involved.
 
-Every page calls `requireAdminViewer()` and every action calls `assertAdmin()`. Authorisation is the database `profiles.role = 'admin'` OR an email listed in the server-only `ADMIN_EMAILS` environment variable, which bootstraps the owner account before any role is promoted. Non-admins are redirected to the dashboard and actions throw.
+Every page calls `requireAdminViewer()` and every action calls `assertAdmin()`. Authorisation is the database `profiles.role = 'admin'` — there is no email allow-list, so only explicitly promoted accounts can open the console. Non-admins are redirected to the dashboard and actions throw.
 
 Suspension is enforced server-side: suspended viewers are redirected to `/suspended`, local sign-in is rejected, and Supabase accounts are additionally banned through the Admin API. Deleting a user removes the Supabase Auth identity, the cascaded profile data and the user's stored files.
 
@@ -219,3 +219,4 @@ Any genuinely unknown path renders the global `not-found.tsx` card: it shows the
 - 860â€“1220 px: two-column dashboard, two-column workspaces.
 - <860 px: slide-over sidebar, single-column content, horizontally compact tables.
 - <560 px: two-column statistics, stacked page actions, condensed rows with status retained.
+

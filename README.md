@@ -20,13 +20,13 @@ DEVSPACE is a working Next.js application — not a static dashboard mock-up. Ev
 - **Markdown Tracker** — real file uploads with byte-level progress, private per-user storage, inline Markdown preview, download, pending records and deletion.
 - **Workspace chat** — a header chat assistant that answers questions from the signed-in user's real projects, notes, workspaces, files and GitHub status.
 - **Support tickets** — every user can open a ticket from `/support` and follow the administrator reply and status.
-- **Admin console** — `/admin` with real usage (people, active today/week, new signups), full user management (promote/demote, suspend/reactivate, typed-`DELETE` deletion) and the support queue with replies and status changes.
-- **Header tools** — global search/command palette, notifications, account menu, workspace chat and a live local clock.
+- **Admin console** — restricted to accounts with the `admin` role, with a shield shortcut next to the header bell. Includes real usage (people, active today/week, new signups), full user management (promote/demote, suspend/reactivate, typed-`DELETE` deletion) and the support queue with replies and status changes.
+- **Header tools** — global search/command palette, notifications, admin shortcut (admins only), account menu, workspace chat and a live local clock.
 - **Settings** — profile and avatar management, persistent dark/light themes, locale preference, JSON export, safe import preview and account deletion.
 - **Backup & restore** — versioned JSON format, duplicate detection, no cross-account overwrite, transactional import.
 - **Responsive design** — fixed desktop sidebar, drawer navigation on mobile, single-column cards, responsive tables and touch-friendly controls.
 - **Security** — server-derived ownership on every query, Zod validation, secure HttpOnly sessions, RLS policies for Supabase and private file storage.
-- **Quality gates** — TypeScript, ESLint, 46 unit/integration tests, 9 Playwright end-to-end tests and a production build.
+- **Quality gates** — TypeScript, ESLint, 43 unit/integration tests, 9 Playwright end-to-end tests and a production build.
 
 ## Demo
 
@@ -262,3 +262,5 @@ One dashboard-only step remains for new user registration and password reset ema
 ## License
 
 Private project. All rights reserved.
+
+

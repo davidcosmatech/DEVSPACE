@@ -29,25 +29,13 @@ export const ticketPriorityLabels: Record<TicketPriority, string> = {
   urgent: "Urgent",
 };
 
-export function parseAdminEmails(raw: string | null | undefined) {
-  return (raw ?? "")
-    .split(/[,;\s]+/)
-    .map((value) => value.trim().toLowerCase())
-    .filter((value) => value.includes("@"));
-}
-
 /**
- * Admins are either promoted in the database (`profiles.role = 'admin'`) or
- * listed in the server-only `ADMIN_EMAILS` environment variable, which is how
- * the first owner account is bootstrapped.
+ * The database role is the single source of truth. There is deliberately no
+ * email or environment allow-list: only `profiles.role = 'admin'` grants access
+ * to the admin console.
  */
-export function isAdminUser(
-  user: { role?: string | null; email?: string | null },
-  adminEmails: string[] = [],
-) {
-  if ((user.role ?? "").toLowerCase() === "admin") return true;
-  const email = (user.email ?? "").trim().toLowerCase();
-  return email !== "" && adminEmails.includes(email);
+export function isAdminUser(user: { role?: string | null }) {
+  return (user.role ?? "").trim().toLowerCase() === "admin";
 }
 
 export function userStatusLabel(status: string | null | undefined) {
@@ -76,7 +64,7 @@ export function summarizeUsers(
   let newThisWeek = 0;
 
   for (const user of users) {
-    if ((user.role ?? "user") === "admin") admins += 1;
+    if (isAdminUser(user)) admins += 1;
     if ((user.status ?? "active") === "suspended") suspended += 1;
 
     const seen = user.lastSeenAt ? new Date(user.lastSeenAt).getTime() : 0;

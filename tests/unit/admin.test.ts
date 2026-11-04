@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   isAdminUser,
-  parseAdminEmails,
   summarizeTicketQueue,
   summarizeUsers,
   ticketPriorityLabels,
@@ -19,40 +18,18 @@ import {
 const day = 24 * 60 * 60 * 1000;
 const now = new Date("2026-11-04T12:00:00Z").getTime();
 
-describe("parseAdminEmails", () => {
-  it("splits, trims and lowercases comma or space separated values", () => {
-    expect(parseAdminEmails(" Demo@Devspace.app, owner@example.com ")).toEqual([
-      "demo@devspace.app",
-      "owner@example.com",
-    ]);
-    expect(parseAdminEmails("a@b.co;c@d.co\ne@f.co")).toEqual(["a@b.co", "c@d.co", "e@f.co"]);
-  });
-
-  it("drops empty and non-email fragments", () => {
-    expect(parseAdminEmails(undefined)).toEqual([]);
-    expect(parseAdminEmails("not-an-email, ,")).toEqual([]);
-  });
-});
-
 describe("isAdminUser", () => {
-  it("accepts a database admin role", () => {
-    expect(isAdminUser({ role: "admin", email: "someone@example.com" })).toBe(true);
+  it("accepts the admin role in any letter case", () => {
+    expect(isAdminUser({ role: "admin" })).toBe(true);
+    expect(isAdminUser({ role: "ADMIN" })).toBe(true);
   });
 
-  it("accepts a bootstrapped env admin email", () => {
-    expect(isAdminUser({ role: "user", email: "Demo@Devspace.app" }, ["demo@devspace.app"])).toBe(
-      true,
-    );
-  });
-
-  it("rejects regular users", () => {
-    expect(isAdminUser({ role: "user", email: "user@example.com" }, ["demo@devspace.app"])).toBe(
-      false,
-    );
-    expect(isAdminUser({ role: null, email: null })).toBe(false);
+  it("rejects every other role, including missing roles", () => {
+    expect(isAdminUser({ role: "user" })).toBe(false);
+    expect(isAdminUser({ role: null })).toBe(false);
+    expect(isAdminUser({})).toBe(false);
   });
 });
-
 describe("summarizeUsers", () => {
   it("counts people, admins, suspensions and active windows", () => {
     const summary = summarizeUsers(
@@ -164,3 +141,4 @@ describe("ticket labels", () => {
     expect(ticketPriorityLabels.urgent).toBe("Urgent");
   });
 });
+

@@ -46,7 +46,7 @@ The local provider cannot be activated accidentally when Supabase is configured:
 ## Admin console
 
 - `/admin` and every admin action call `requireAdminViewer()` / `assertAdmin()` on the server; the sidebar link is only a convenience.
-- Access requires `profiles.role = 'admin'` or an email in the server-only `ADMIN_EMAILS` variable. That variable never reaches the browser.
+- Access requires `profiles.role = 'admin'`. There is no email or environment allow-list, and the header/sidebar links are only rendered for admins.
 - Admins cannot demote, suspend or delete their own account, and the last administrator cannot be demoted.
 - Suspended viewers are redirected to `/suspended`; local sign-in is rejected and Supabase accounts are banned through the Admin API.
 - Account deletion requires the `DELETE` confirmation phrase, removes the Auth identity first, then cascades profile data and deletes the user's stored files.
@@ -156,3 +156,4 @@ Additional hardening recommended for production:
 - File uploads are capped at 4 MB because of the Vercel request-body limit. Larger files would need direct-to-storage signed uploads.
 - There is no user-facing activity audit log.
 - The app does not implement email verification itself; it relies on Supabase's configuration.
+

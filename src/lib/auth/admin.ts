@@ -2,20 +2,17 @@ import "server-only";
 
 import { redirect } from "next/navigation";
 
-import { isAdminUser, parseAdminEmails } from "@/lib/admin";
+import { isAdminUser } from "@/lib/admin";
 import { requireViewer, type Viewer } from "@/lib/auth";
 
-export function adminEmails() {
-  return parseAdminEmails(process.env.ADMIN_EMAILS);
-}
-
-export function viewerIsAdmin(viewer: Pick<Viewer, "email" | "role">) {
-  return isAdminUser(viewer, adminEmails());
+export function viewerIsAdmin(viewer: Pick<Viewer, "role">) {
+  return isAdminUser(viewer);
 }
 
 /**
- * Server-side gate for every admin page and action. Non-admins are redirected
- * (pages) or rejected (actions) — the client never decides this.
+ * Server-side gate for every admin page and action. Only `profiles.role =
+ * 'admin'` is accepted — there is no email allow-list. Non-admins are
+ * redirected (pages) or rejected (actions); the client never decides this.
  */
 export async function requireAdminViewer(): Promise<Viewer> {
   const viewer = await requireViewer();

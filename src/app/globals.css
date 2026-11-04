@@ -5606,3 +5606,16 @@ svg {
     display: none;
   }
 }
+
+/* Admin shortcut in the header (admins only) */
+.admin-header-button {
+  color: var(--accent);
+  border-color: var(--accent-ring);
+  background: var(--accent-soft);
+}
+
+.admin-header-button:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-bright);
+}

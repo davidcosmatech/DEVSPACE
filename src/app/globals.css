@@ -1995,6 +1995,29 @@ svg {
   padding-top: 15px;
 }
 
+.github-stats.has-private {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.github-stats.has-private .github-stat strong {
+  font-size: 17px;
+}
+
+.github-stats.has-private .github-stat span {
+  font-size: 9.5px;
+}
+
+.github-stat-private strong {
+  color: var(--warning);
+}
+
+.github-stat-private span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--warning);
+}
+
 .github-stat {
   text-align: center;
 }

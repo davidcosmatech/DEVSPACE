@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, Globe2, UploadCloud } from "lucide-react";
+import { ArrowUpRight, Globe2, Lock, UploadCloud } from "lucide-react";
 import { Suspense } from "react";
 
 import { BannerArt } from "@/components/dashboard/banner-art";
@@ -309,11 +309,22 @@ async function GitHubPanel({ viewer }: { viewer: Viewer }) {
           <p className="github-bio">
             {result.profile.bio || `${viewer.displayName} is building in public on GitHub.`}
           </p>
-          <div className="github-stats">
+          <div className={cn("github-stats", result.privateOwner && "has-private")}>
             <div className="github-stat">
               <strong>{result.profile.publicRepos}</strong>
               <span>Repos</span>
             </div>
+            {result.privateOwner ? (
+              <div
+                className="github-stat github-stat-private"
+                title="Private repositories visible only to your account"
+              >
+                <strong>{result.privateRepos.length}</strong>
+                <span>
+                  <Lock size={9} /> Private
+                </span>
+              </div>
+            ) : null}
             <div className="github-stat">
               <strong>{result.profile.followers}</strong>
               <span>Followers</span>

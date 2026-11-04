@@ -223,10 +223,12 @@ function Header({
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setSearchOpen(true);
-      }
+      if (event.isComposing || event.defaultPrevented) return;
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "k") return;
+      // A dialog already owns the keyboard; do not open search behind it.
+      if (document.querySelector('[role="dialog"]')) return;
+      event.preventDefault();
+      setSearchOpen(true);
     }
     function onClick(event: MouseEvent) {
       const target = event.target as Node;
@@ -495,14 +497,19 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
   const [results, setResults] = useState<SearchResults>(emptyResults);
   const [resultsFor, setResultsFor] = useState("");
   const [selected, setSelected] = useState(0);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") onCloseRef.current();
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, []);
 
   useEffect(() => {
     const trimmed = query.trim();

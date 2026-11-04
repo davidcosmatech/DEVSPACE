@@ -168,3 +168,31 @@ test("is responsive without horizontal overflow", async ({ browser }) => {
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
   await context.close();
 });
+
+test("keeps keyboard focus while typing in a controlled dialog field", async ({ page }) => {
+  await page.addInitScript(() => {
+    const pickerHost = window as unknown as {
+      showDirectoryPicker: () => Promise<FileSystemDirectoryHandle>;
+    };
+    pickerHost.showDirectoryPicker = async () => {
+      const root = await navigator.storage.getDirectory();
+      return root.getDirectoryHandle("E2E Parent", { create: true });
+    };
+  });
+
+  await signIn(page);
+  await page.goto("/files");
+  await page.getByRole("button", { name: "New Workspace" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Workspace folder name").fill(`E2E Focus ${suffix}`);
+  await dialog.getByRole("button", { name: "Choose location & create" }).click();
+  await expect(page.getByRole("button", { name: "New File" })).toBeVisible({ timeout: 15_000 });
+
+  await page.getByRole("button", { name: "New File" }).click();
+  const content = page.locator("#local-file-content");
+  await content.click();
+  await page.keyboard.type("abcdef with spaces", { delay: 60 });
+
+  await expect(content).toHaveValue(/abcdef with spaces/);
+  await expect(content).toBeFocused();
+});

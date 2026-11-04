@@ -247,7 +247,7 @@ GitHub `main` still contains the previous static prototype. The full application
 - `npm run typecheck` — passed.
 - `npm run lint` — passed.
 - `npm test` — 43/43 tests passed.
-- `npm run test:e2e` — 9/9 Playwright flows passed locally.
+- `npm run test:e2e` — 10/10 Playwright flows passed locally.
 - `npm run build` — passed (Next.js 16.4.5).
 - Supabase-mode browser test — login, project CRUD, note autosave/reload, workspace/link CRUD, private Storage upload/download/delete, theme persistence and export passed.
 - Production browser test — login, project/workspace CRUD, public/private sections, multi-select bulk updates, chat assistant, inline Markdown preview, local File Workspace page, Storage upload/download/delete, theme persistence and export passed against `https://devspace-ruby.vercel.app` with zero console errors.
@@ -264,6 +264,7 @@ Browsers deliberately forbid a web page from launching Windows Explorer or a des
 - offers “Open in new tab” / download for formats the browser cannot render.
 
 Workspace folder handles are stored in IndexedDB, so the folder list survives reloads; Chrome re-asks for permission when the handle was not recently used. Everything happens on the user's machine — no file content is uploaded to Supabase.
+
 
 
 

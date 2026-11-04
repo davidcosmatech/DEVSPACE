@@ -154,6 +154,12 @@ Suspension is enforced server-side: suspended viewers are redirected to `/suspen
 
 Users reach `/support` from a **My Tickets** sidebar entry (visible to every account) or the account menu. The sidebar shows a counter for open/in-progress tickets, and administrator replies surface in the notification bell. They create a ticket (subject, priority, message) and see the administrator's reply and current status; they can never read another user's tickets.
 
+## Keyboard and focus
+
+Dialogs own the keyboard while they are open. `Modal` keeps its `onClose` callback in a ref and runs its focus/escape effect only when `open` changes, so re-renders caused by typing can never move focus back to the close button. The initial focus prefers a field inside `.modal-body`, then a footer action, then the panel itself; it never targets the header close button, and it never steals focus from an element that is already focused inside the dialog. Closing a dialog restores focus to the element that opened it.
+
+The only global shortcut is `Ctrl/Cmd + K`. It ignores key repeats from IME composition, does not open search while a dialog is open, and never intercepts plain typing, `Tab`, `Enter` or `Space`. The command palette handles `Escape`, arrows and `Enter` locally on its input.
+
 ## Backup and restore
 
 Export produces a stable, versioned JSON document (`app`, `schemaVersion: 1`, `exportedAt`). IDs and storage paths are excluded.

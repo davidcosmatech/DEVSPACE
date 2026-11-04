@@ -26,7 +26,7 @@ DEVSPACE is a working Next.js application — not a static dashboard mock-up. Ev
 - **Backup & restore** — versioned JSON format, duplicate detection, no cross-account overwrite, transactional import.
 - **Responsive design** — fixed desktop sidebar, drawer navigation on mobile, single-column cards, responsive tables and touch-friendly controls.
 - **Security** — server-derived ownership on every query, Zod validation, secure HttpOnly sessions, RLS policies for Supabase and private file storage.
-- **Quality gates** — TypeScript, ESLint, 43 unit/integration tests, 9 Playwright end-to-end tests and a production build.
+- **Quality gates** — TypeScript, ESLint, 43 unit/integration tests, 10 Playwright end-to-end tests and a production build.
 
 ## Demo
 
@@ -266,5 +266,6 @@ One dashboard-only step remains for new user registration and password reset ema
 ## License
 
 Private project. All rights reserved.
+
 
 

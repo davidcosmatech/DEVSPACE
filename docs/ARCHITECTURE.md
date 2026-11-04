@@ -131,6 +131,12 @@ The header chat button opens a read-only assistant. `POST /api/assistant` valida
 
 `projects.visibility` is `public` or `private`. `projects.workspace_id` optionally links a project to one of the user's Browser Workspaces. The projects page renders a Public section followed by a Private section, supports filtering by workspace, and allows multi-select bulk updates of visibility or workspace assignment.
 
+## Local file workspaces
+
+`/files` is a browser-only module using the File System Access API. The user chooses a parent directory through the browser's native picker; DEVSPACE creates a real workspace folder and stores the directory handle in IndexedDB. All subsequent folder/file operations happen directly in the browser against the local handle. No file contents pass through Vercel or Supabase.
+
+The browser sandbox intentionally prevents launching Windows Explorer, Word, PDF Reader or VS Code. Folders navigate inside DEVSPACE and supported documents preview in a modal; unsupported formats can be opened in a browser tab. Chrome/Edge over HTTPS (or localhost) is required.
+
 ## Backup and restore
 
 Export produces a stable, versioned JSON document (`app`, `schemaVersion: 1`, `exportedAt`). IDs and storage paths are excluded.

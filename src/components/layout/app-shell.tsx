@@ -9,6 +9,7 @@ import {
   FileText,
   Folder,
   FolderKanban,
+  HardDrive,
   House,
   LayoutDashboard,
   LogOut,
@@ -43,6 +44,7 @@ const nav = [
   { href: "/notes", label: "Notes", icon: FileText },
   { href: "/github", label: "GitHub", icon: Github },
   { href: "/workspaces", label: "Browser Workspaces", icon: BrowserWorkspaceIcon },
+  { href: "/files", label: "File Workspace", icon: HardDrive },
   { href: "/tracker", label: "Markdown Tracker", icon: TrackerIcon },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

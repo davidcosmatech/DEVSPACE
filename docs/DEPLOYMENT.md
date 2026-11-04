@@ -196,7 +196,7 @@ After deployment:
 | Auth | Supabase Auth; demo account provisioned and confirmed |
 | Registration | `SUPABASE_SKIP_EMAIL_CONFIRMATION=true`; admin-confirmed signup avoids Supabase's default email rate limit |
 | Demo workspace | 5 projects, 12 notes, 3 workspaces, 10 tracker records, 8 real uploaded files |
-| Production verification | Login, project CRUD, public/private sections, bulk project updates, workspace assignment, header chat assistant, inline tracker preview, Storage upload/download/delete, all pages, theme and export — passed with zero console errors |
+| Production verification | Login, project CRUD, public/private sections, bulk project updates, workspace assignment, header chat assistant, inline tracker preview, local File Workspace (create/rename/delete/import/preview), Storage upload/download/delete, all pages, theme and export — passed with zero console errors |
 
 ### Remaining dashboard step
 
@@ -225,9 +225,21 @@ GitHub `main` still contains the previous static prototype. The full application
 
 - `npm run typecheck` — passed.
 - `npm run lint` — passed.
-- `npm test` — 20/20 tests passed.
+- `npm test` — 26/26 tests passed.
 - `npm run test:e2e` — 9/9 Playwright flows passed locally.
 - `npm run build` — passed (Next.js 16.4.5).
 - Supabase-mode browser test — login, project CRUD, note autosave/reload, workspace/link CRUD, private Storage upload/download/delete, theme persistence and export passed.
-- Production browser test — login, project/workspace CRUD, public/private sections, multi-select bulk updates, chat assistant, inline Markdown preview, Storage upload/download/delete, theme persistence and export passed against `https://devspace-ruby.vercel.app` with zero console errors.
+- Production browser test — login, project/workspace CRUD, public/private sections, multi-select bulk updates, chat assistant, inline Markdown preview, local File Workspace page, Storage upload/download/delete, theme persistence and export passed against `https://devspace-ruby.vercel.app` with zero console errors.
 - Database verification — 9 tables, RLS enabled, 28 product-table policies, 4 storage policies, 1 auth user, 1 profile and 10 tracker records.
+
+### Local File Workspace caveat
+
+`/files` uses the File System Access API, which only exists in Chromium browsers (Chrome/Edge) on a secure origin (`https://` or `localhost`). Firefox and Safari render an explicit “Chrome or Edge is required” state instead of failing silently.
+
+Browsers deliberately forbid a web page from launching Windows Explorer or a desktop application, so “open folder in Explorer” and “open with default app” cannot be implemented for a hosted site. DEVSPACE instead:
+
+- browses the selected folder tree inside the app (breadcrumbs + in-app explorer);
+- previews Markdown, text, images and PDFs in a modal;
+- offers “Open in new tab” / download for formats the browser cannot render.
+
+Workspace folder handles are stored in IndexedDB, so the folder list survives reloads; Chrome re-asks for permission when the handle was not recently used. Everything happens on the user's machine — no file content is uploaded to Supabase.

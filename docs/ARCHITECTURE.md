@@ -172,6 +172,12 @@ Server Actions give a compact, type-safe mutation path with built-in same-origin
 - GitHub failures are classified as not found, rate limited, invalid or network.
 - Import failures roll back the entire transaction.
 
+### Routes and 404 handling
+
+`next.config.ts` redirects common single-word paths to their real section (`/private` and `/repositories` → `/github`, `/workspace` → `/workspaces`, `/file` → `/files`, `/note` → `/notes`, `/project` → `/projects`, `/markdown` → `/tracker`, `/home` → `/dashboard`) so shared or hand-typed links still land on a working page.
+
+Any genuinely unknown path renders the global `not-found.tsx` card: it shows the attempted route, offers one-click links to every workspace section and keeps the “Back to dashboard” action.
+
 ## Module map
 
 | Module | Responsibility |

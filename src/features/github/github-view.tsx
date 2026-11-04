@@ -284,7 +284,11 @@ export function GitHubView({
           )}
 
           {result.privateOwner ? (
-            <section className="github-private" aria-labelledby="github-private-title">
+            <section
+              id="github-private"
+              className="github-private"
+              aria-labelledby="github-private-title"
+            >
               <div className="github-private-head">
                 <div className="github-private-title">
                   <span className="github-private-lock">

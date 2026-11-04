@@ -4319,6 +4319,50 @@ svg {
   font-size: 12.5px;
 }
 
+.error-card .error-path {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  margin: -8px 0 18px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  padding: 4px 11px;
+  color: var(--muted-strong);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.error-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px;
+}
+
+.error-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  padding: 6px 10px;
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 540;
+  transition:
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.error-link:hover {
+  border-color: var(--accent-ring);
+  color: var(--accent);
+}
+
 [data-sonner-toaster] {
   font-family: var(--font-sans) !important;
 }

@@ -9,6 +9,19 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "12mb",
     },
   },
+  async redirects() {
+    return [
+      { source: "/private", destination: "/github", permanent: false },
+      { source: "/repositories", destination: "/github", permanent: false },
+      { source: "/repos", destination: "/github", permanent: false },
+      { source: "/home", destination: "/dashboard", permanent: false },
+      { source: "/workspace", destination: "/workspaces", permanent: false },
+      { source: "/project", destination: "/projects", permanent: false },
+      { source: "/note", destination: "/notes", permanent: false },
+      { source: "/file", destination: "/files", permanent: false },
+      { source: "/markdown", destination: "/tracker", permanent: false },
+    ];
+  },
   async headers() {
     return [
       {

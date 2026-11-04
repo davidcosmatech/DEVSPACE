@@ -23,6 +23,10 @@ export const profiles = pgTable(
     displayName: varchar("display_name", { length: 80 }).notNull(),
     avatarUrl: text("avatar_url"),
     bio: text("bio").notNull().default(""),
+    email: varchar("email", { length: 254 }),
+    role: varchar("role", { length: 12 }).notNull().default("user"),
+    status: varchar("status", { length: 12 }).notNull().default("active"),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
     githubUsername: varchar("github_username", { length: 39 }),
     githubCache: jsonb("github_cache").$type<Record<string, unknown>>(),
     githubCacheUpdatedAt: timestamp("github_cache_updated_at", { withTimezone: true }),
@@ -173,8 +177,30 @@ export const trackerFiles = pgTable(
   ],
 );
 
-export const userSettings = pgTable(
-  "user_settings",
+export const tickets = pgTable(
+  "tickets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    subject: varchar("subject", { length: 140 }).notNull(),
+    message: text("message").notNull(),
+    status: varchar("status", { length: 16 }).notNull().default("open"),
+    priority: varchar("priority", { length: 10 }).notNull().default("normal"),
+    adminReply: text("admin_reply"),
+    repliedAt: timestamp("replied_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("tickets_user_idx").on(table.userId),
+    index("tickets_status_idx").on(table.status),
+    index("tickets_created_idx").on(table.createdAt),
+  ],
+);
+
+export const userSettings = pgTable("user_settings",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: uuid("user_id")
@@ -198,4 +224,5 @@ export type Note = typeof notes.$inferSelect;
 export type Workspace = typeof workspaces.$inferSelect;
 export type WorkspaceLink = typeof workspaceLinks.$inferSelect;
 export type TrackerFile = typeof trackerFiles.$inferSelect;
+export type Ticket = typeof tickets.$inferSelect;
 export type UserSettings = typeof userSettings.$inferSelect;

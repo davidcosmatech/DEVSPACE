@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { userSettings } from "@/lib/db/schema";
 import { requireViewer, type Viewer } from "@/lib/auth";
+import { viewerIsAdmin } from "@/lib/auth/admin";
 import { getShellData } from "@/lib/queries/shell";
 import { AppShell } from "@/components/layout/app-shell";
 
@@ -18,7 +19,12 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
   const { notifications } = await getShellData(viewer.id, viewer.githubUsername);
 
   return (
-    <AppShell viewer={viewer} notifications={notifications} theme={theme}>
+    <AppShell
+      viewer={viewer}
+      notifications={notifications}
+      theme={theme}
+      isAdmin={viewerIsAdmin(viewer)}
+    >
       {children}
     </AppShell>
   );

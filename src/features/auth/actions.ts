@@ -68,6 +68,18 @@ export async function loginAction(input: unknown): Promise<AuthActionResult> {
     return { ok: false, error: GENERIC_LOGIN_ERROR };
   }
 
+  const accountProfile = await db
+    .select({ status: profiles.status })
+    .from(profiles)
+    .where(eq(profiles.id, account.id))
+    .limit(1);
+  if (accountProfile[0]?.status === "suspended") {
+    return {
+      ok: false,
+      error: "This account is suspended. Contact the workspace administrator.",
+    };
+  }
+
   await setSessionCookie(account.id, account.sessionVersion);
   return { ok: true };
 }

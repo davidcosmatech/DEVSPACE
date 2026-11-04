@@ -17,6 +17,9 @@ export type Viewer = {
   displayName: string;
   avatarUrl: string | null;
   bio: string;
+  role: string;
+  status: string;
+  lastSeenAt: Date | null;
   githubUsername: string | null;
   githubCache: Record<string, unknown> | null;
   githubCacheUpdatedAt: Date | null;
@@ -89,6 +92,13 @@ async function ensureSupabaseProfile(input: {
   const db = await getDb();
   const existing = await db.select().from(profiles).where(eq(profiles.id, input.id)).limit(1);
   if (existing[0]) {
+    if (existing[0].email !== input.email) {
+      await db
+        .update(profiles)
+        .set({ email: input.email })
+        .where(eq(profiles.id, input.id))
+        .catch(() => {});
+    }
     return { ...existing[0], email: input.email };
   }
 
@@ -102,6 +112,7 @@ async function ensureSupabaseProfile(input: {
       displayName: input.displayName || input.email.split("@")[0] || "Developer",
       avatarUrl: input.avatarUrl ?? null,
       bio: "",
+      email: input.email,
     })
     .onConflictDoNothing()
     .returning();
@@ -125,6 +136,7 @@ async function ensureSupabaseProfile(input: {
         displayName: input.displayName || input.email.split("@")[0] || "Developer",
         avatarUrl: input.avatarUrl ?? null,
         bio: "",
+        email: input.email,
       })
       .returning();
     if (!retried) {
@@ -159,6 +171,13 @@ async function loadLocalViewer(userId: string, sessionVersion: number): Promise<
     .limit(1);
 
   if (!rows[0] || rows[0].sessionVersion !== sessionVersion) return null;
+  if (!rows[0].profile.email) {
+    await db
+      .update(profiles)
+      .set({ email: rows[0].email })
+      .where(eq(profiles.id, userId))
+      .catch(() => {});
+  }
   return { ...rows[0].profile, email: rows[0].email };
 }
 
@@ -189,9 +208,28 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
   return loadLocalViewer(session.userId, session.version);
 });
 
+const PRESENCE_WINDOW_MS = 5 * 60_000;
+
+/** Records weekly/daily activity for the admin usage panel, throttled per viewer. */
+async function touchPresence(viewer: Viewer) {
+  const lastSeen = viewer.lastSeenAt ? viewer.lastSeenAt.getTime() : 0;
+  if (Date.now() - lastSeen < PRESENCE_WINDOW_MS) return;
+  try {
+    const db = await getDb();
+    await db
+      .update(profiles)
+      .set({ lastSeenAt: new Date() })
+      .where(eq(profiles.id, viewer.id));
+  } catch {
+    // Presence tracking must never block a page render.
+  }
+}
+
 export async function requireViewer() {
   const viewer = await getViewer();
   if (!viewer) redirect("/login");
+  if (viewer.status === "suspended") redirect("/suspended");
+  await touchPresence(viewer);
   return viewer;
 }
 

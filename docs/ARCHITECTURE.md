@@ -138,6 +138,22 @@ The header chat button opens a read-only assistant. `POST /api/assistant` valida
 
 The browser sandbox intentionally prevents launching Windows Explorer, Word, PDF Reader or VS Code. Folders navigate inside DEVSPACE and supported documents preview in a modal; unsupported formats can be opened in a browser tab. Chrome/Edge over HTTPS (or localhost) is required.
 
+## Admin console and support
+
+`/admin` is a restricted area with three views:
+
+- **Overview** — people, active today, active this week, new signups this week and the support queue size, plus product totals (projects, notes, tickets, admins, suspensions) and recent activity.
+- **People** — searchable account list with per-user project/note/ticket counts, last-seen time, promote/demote, suspend/reactivate and a typed-`DELETE` account deletion.
+- **Tickets** — the support queue with status filters, the full message, an administrator reply and status changes.
+
+Activity is measured without third-party analytics: `requireViewer()` refreshes `profiles.last_seen_at` at most once every five minutes per user. Daily/weekly totals are derived from that column; no tracking scripts or cookies are involved.
+
+Every page calls `requireAdminViewer()` and every action calls `assertAdmin()`. Authorisation is the database `profiles.role = 'admin'` OR an email listed in the server-only `ADMIN_EMAILS` environment variable, which bootstraps the owner account before any role is promoted. Non-admins are redirected to the dashboard and actions throw.
+
+Suspension is enforced server-side: suspended viewers are redirected to `/suspended`, local sign-in is rejected, and Supabase accounts are additionally banned through the Admin API. Deleting a user removes the Supabase Auth identity, the cascaded profile data and the user's stored files.
+
+Users reach `/support` from the sidebar or the account menu. They create a ticket (subject, priority, message) and see the administrator's reply and current status; they can never read another user's tickets.
+
 ## Backup and restore
 
 Export produces a stable, versioned JSON document (`app`, `schemaVersion: 1`, `exportedAt`). IDs and storage paths are excluded.
@@ -188,6 +204,10 @@ Any genuinely unknown path renders the global `not-found.tsx` card: it shows the
 | `lib/storage` | Private local/Supabase file operations |
 | `lib/github` | GitHub REST client, public + token-gated private repositories, error classification |
 | `lib/github-private` | Pure private-repository access rules and summaries (unit tested) |
+| `lib/admin` | Pure admin/usage/ticket helpers and labels (unit tested) |
+| `lib/auth/admin` | Server-side admin gate (`requireAdminViewer`, `assertAdmin`) |
+| `features/admin` | Admin queries, actions and console UI |
+| `features/support` | Ticket creation action and user support UI |
 | `app/api/assistant` | Read-only workspace chat answers |
 | `features/*/actions.ts` | Authorized mutations |
 | `features/*/*-view.tsx` | Interactive UI |

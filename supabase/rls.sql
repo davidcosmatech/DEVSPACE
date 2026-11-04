@@ -23,6 +23,7 @@ alter table public.workspaces enable row level security;
 alter table public.workspace_links enable row level security;
 alter table public.tracker_files enable row level security;
 alter table public.user_settings enable row level security;
+alter table public.tickets enable row level security;
 
 -- Development-only tables exist in the schema but are never exposed. With RLS
 -- enabled and no policies, anon/authenticated clients are denied by default.
@@ -158,9 +159,7 @@ create policy "tracker_files_delete_own" on public.tracker_files
 -- Settings ------------------------------------------------------------------
 drop policy if exists "user_settings_select_own" on public.user_settings;
 create policy "user_settings_select_own" on public.user_settings
-  for select to authenticated using ((select auth.uid()) = user_id);
-
-drop policy if exists "user_settings_insert_own" on public.user_settings;
+  for select to authenticated using ((select auth.uid()) = user_id);drop policy if exists "user_settings_insert_own" on public.user_settings;
 create policy "user_settings_insert_own" on public.user_settings
   for insert to authenticated with check ((select auth.uid()) = user_id);
 
@@ -173,3 +172,27 @@ create policy "user_settings_update_own" on public.user_settings
 drop policy if exists "user_settings_delete_own" on public.user_settings;
 create policy "user_settings_delete_own" on public.user_settings
   for delete to authenticated using ((select auth.uid()) = user_id);
+
+-- Support tickets ------------------------------------------------------------
+drop policy if exists "tickets_select_own" on public.tickets;
+create policy "tickets_select_own" on public.tickets
+  for select to authenticated using ((select auth.uid()) = user_id);
+
+drop policy if exists "tickets_insert_own" on public.tickets;
+create policy "tickets_insert_own" on public.tickets
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+
+drop policy if exists "tickets_update_own" on public.tickets;
+create policy "tickets_update_own" on public.tickets
+  for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+drop policy if exists "tickets_delete_own" on public.tickets;
+create policy "tickets_delete_own" on public.tickets
+  for delete to authenticated using ((select auth.uid()) = user_id);
+
+-- Role and status are managed only by the server (admin actions). Browser
+-- clients must never be able to promote or reactivate an account themselves.
+revoke update (role, status) on public.profiles from authenticated;
+revoke update (role, status) on public.profiles from anon;

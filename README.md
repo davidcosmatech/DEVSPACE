@@ -19,12 +19,14 @@ DEVSPACE is a working Next.js application — not a static dashboard mock-up. Ev
 - **File Workspace** — real local folders and files through the File System Access API: create workspaces/subfolders/files, import documents, rename, delete and preview supported formats in the browser. Requires Chrome or Edge; browsers cannot launch Windows Explorer or desktop apps.
 - **Markdown Tracker** — real file uploads with byte-level progress, private per-user storage, inline Markdown preview, download, pending records and deletion.
 - **Workspace chat** — a header chat assistant that answers questions from the signed-in user's real projects, notes, workspaces, files and GitHub status.
+- **Support tickets** — every user can open a ticket from `/support` and follow the administrator reply and status.
+- **Admin console** — `/admin` with real usage (people, active today/week, new signups), full user management (promote/demote, suspend/reactivate, typed-`DELETE` deletion) and the support queue with replies and status changes.
 - **Header tools** — global search/command palette, notifications, account menu, workspace chat and a live local clock.
 - **Settings** — profile and avatar management, persistent dark/light themes, locale preference, JSON export, safe import preview and account deletion.
 - **Backup & restore** — versioned JSON format, duplicate detection, no cross-account overwrite, transactional import.
 - **Responsive design** — fixed desktop sidebar, drawer navigation on mobile, single-column cards, responsive tables and touch-friendly controls.
 - **Security** — server-derived ownership on every query, Zod validation, secure HttpOnly sessions, RLS policies for Supabase and private file storage.
-- **Quality gates** — TypeScript, ESLint, 32 unit/integration tests, 9 Playwright end-to-end tests and a production build.
+- **Quality gates** — TypeScript, ESLint, 46 unit/integration tests, 9 Playwright end-to-end tests and a production build.
 
 ## Demo
 
@@ -35,7 +37,7 @@ Email:    demo@devspace.app
 Password: Devspace123!
 ```
 
-The hosted preview has its own seeded demo account with a separate password that is not stored in this repository. The local demo account is created only by the PGlite provider.
+The hosted preview has its own seeded demo account with a separate password that is not stored in this repository. The local demo account is created only by the PGlite provider. The demo account is the workspace administrator, so it can open `/admin` and `/support`; any other account can only open `/support`.
 
 ## Technology
 
@@ -192,6 +194,14 @@ Dark and light themes share the same token system in `src/app/globals.css`. Moti
 |---|---|
 | ![File Workspace](docs/screenshots/file-workspace.png) | ![File preview](docs/screenshots/file-workspace-preview.png) |
 
+| Admin console — usage | Admin console — people |
+|---|---|
+| ![Admin overview](docs/screenshots/admin-overview.png) | ![Admin people](docs/screenshots/admin-users.png) |
+
+| Admin console — tickets | User support |
+|---|---|
+| ![Admin ticket](docs/screenshots/admin-ticket.png) | ![Support](docs/screenshots/support-tickets.png) |
+
 | Markdown preview | Workspaces with projects |
 |---|---|
 | ![Markdown preview](docs/screenshots/tracker-preview.png) | ![Workspaces](docs/screenshots/workspaces-projects.png) |
@@ -237,6 +247,7 @@ The Playwright suite uses the locally installed Chrome channel by default. To us
 - Production URL: [https://devspace-ruby.vercel.app](https://devspace-ruby.vercel.app)
 - Supabase migrations, RLS policies and the private `markdown-files` bucket are applied.
 - Authentication, project/note/workspace CRUD, tracker upload/download, theme persistence and JSON export were verified against the production deployment.
+- The admin console (`/admin`) and support tickets (`/support`) were verified in production: admin gate, usage metrics, people management and a real ticket reply/status change.
 - GitHub branch: `devspace-3.0` in `davidcosmatech/DEVSPACE`. The existing `main` branch is untouched.
 
 One dashboard-only step remains for new user registration and password reset emails: in **Supabase → Authentication → URL Configuration**, set the Site URL to `https://devspace-ruby.vercel.app` and allow `https://devspace-ruby.vercel.app/callback` and `http://localhost:3000/callback`. The seeded demo account works without it. Details are in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).

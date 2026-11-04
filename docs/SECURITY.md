@@ -43,6 +43,22 @@ The local provider cannot be activated accidentally when Supabase is configured:
 - Downloads recheck both the file id and the owner before touching storage.
 - Supabase RLS mirrors these rules for any direct client access.
 
+## Admin console
+
+- `/admin` and every admin action call `requireAdminViewer()` / `assertAdmin()` on the server; the sidebar link is only a convenience.
+- Access requires `profiles.role = 'admin'` or an email in the server-only `ADMIN_EMAILS` variable. That variable never reaches the browser.
+- Admins cannot demote, suspend or delete their own account, and the last administrator cannot be demoted.
+- Suspended viewers are redirected to `/suspended`; local sign-in is rejected and Supabase accounts are banned through the Admin API.
+- Account deletion requires the `DELETE` confirmation phrase, removes the Auth identity first, then cascades profile data and deletes the user's stored files.
+- `tickets` has RLS enabled with owner-only policies, so a browser client can only read or create its own tickets.
+- `profiles.role` and `profiles.status` are revoked from `authenticated`/`anon`, so role escalation is impossible without the server connection.
+
+## Usage metrics
+
+- Presence is derived from `profiles.last_seen_at`, refreshed at most once every five minutes per viewer.
+- No third-party analytics, fingerprinting or tracking cookies are used.
+- The admin view aggregates existing rows; it does not create a separate analytics store.
+
 ## Input validation
 
 - All mutations parse input with Zod before touching the database.
@@ -79,7 +95,7 @@ The local provider cannot be activated accidentally when Supabase is configured:
 
 - `.env`, `.env.local`, `.data/` and key files are gitignored.
 - Only `.env.example` is tracked.
-- `SUPABASE_SERVICE_ROLE_KEY` has no `NEXT_PUBLIC_` prefix and is used only in `src/lib/storage.ts` and `src/features/settings/actions.ts`.
+- `SUPABASE_SERVICE_ROLE_KEY` has no `NEXT_PUBLIC_` prefix and is used only in `src/lib/storage.ts`, `src/features/settings/actions.ts` and `src/features/admin/actions.ts`.
 - The client receives only the Supabase URL and publishable key.
 - No credential is printed in logs, documentation or chat.
 

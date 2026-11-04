@@ -57,6 +57,10 @@ SESSION_SECRET=<48-byte-random-secret>
 # private repositories you want listed. Private data is shown only when the
 # connected GitHub username equals the token owner.
 GITHUB_PRIVATE_TOKEN=<github-fine-grained-read-only-token>
+
+# Comma-separated emails that always have admin console access. This bootstraps
+# the owner account; admins can then promote other users from /admin.
+ADMIN_EMAILS=owner@example.com
 ```
 
 Never commit `.env.local`, connection strings or keys. `.gitignore` excludes all local environment files.
@@ -196,14 +200,16 @@ After deployment:
 | Production URL | https://devspace-ruby.vercel.app |
 | Vercel project | `devspace` / `davidcosmatechs-projects` |
 | GitHub branch | `devspace-3.0` in `davidcosmatech/DEVSPACE` |
-| Supabase migrations | `0000_init`, `0001_github_cache`, `0002_project_workspaces_visibility` applied |
+| Supabase migrations | `0000_init`, `0001_github_cache`, `0002_project_workspaces_visibility`, `0003_admin_console_tickets` applied |
 | RLS | Enabled on all nine public tables; 4 policies per product table |
 | Storage | Private `markdown-files` bucket, 4 MB limit, 4 owner policies |
 | Auth | Supabase Auth; demo account provisioned and confirmed |
 | Registration | `SUPABASE_SKIP_EMAIL_CONFIRMATION=true`; admin-confirmed signup avoids Supabase's default email rate limit |
 | Private GitHub repos | `GITHUB_PRIVATE_TOKEN` (server-only, read-only) set in Vercel for all environments |
+| Admin access | `ADMIN_EMAILS` (server-only) plus `profiles.role` promotions from `/admin` |
+| Usage metrics | Derived from `profiles.last_seen_at` (throttled presence) and existing records; no analytics vendor |
 | Demo workspace | 5 projects, 12 notes, 3 workspaces, 10 tracker records, 8 real uploaded files |
-| Production verification | Login, project CRUD, public/private sections, bulk project updates, workspace assignment, header chat assistant, inline tracker preview, local File Workspace (create/rename/delete/import/preview), GitHub private-repository section, Storage upload/download/delete, all pages, theme and export — passed with zero console errors |
+| Production verification | Login, project CRUD, public/private sections, bulk project updates, workspace assignment, header chat assistant, inline tracker preview, local File Workspace (create/rename/delete/import/preview), GitHub private-repository section, admin console and support tickets, Storage upload/download/delete, all pages, theme and export — passed with zero console errors |
 
 ### Remaining dashboard step
 
@@ -232,7 +238,7 @@ GitHub `main` still contains the previous static prototype. The full application
 
 - `npm run typecheck` — passed.
 - `npm run lint` — passed.
-- `npm test` — 32/32 tests passed.
+- `npm test` — 46/46 tests passed.
 - `npm run test:e2e` — 9/9 Playwright flows passed locally.
 - `npm run build` — passed (Next.js 16.4.5).
 - Supabase-mode browser test — login, project CRUD, note autosave/reload, workspace/link CRUD, private Storage upload/download/delete, theme persistence and export passed.
@@ -250,3 +256,5 @@ Browsers deliberately forbid a web page from launching Windows Explorer or a des
 - offers “Open in new tab” / download for formats the browser cannot render.
 
 Workspace folder handles are stored in IndexedDB, so the folder list survives reloads; Chrome re-asks for permission when the handle was not recently used. Everything happens on the user's machine — no file content is uploaded to Supabase.
+
+

@@ -12,6 +12,7 @@ import {
   HardDrive,
   House,
   LayoutDashboard,
+  LifeBuoy,
   LogOut,
   Menu,
   MessageCircle,
@@ -19,6 +20,7 @@ import {
   Rocket,
   Search,
   Settings,
+  ShieldCheck,
   Sun,
   UploadCloud,
   User,
@@ -46,18 +48,23 @@ const nav = [
   { href: "/workspaces", label: "Browser Workspaces", icon: BrowserWorkspaceIcon },
   { href: "/files", label: "File Workspace", icon: HardDrive },
   { href: "/tracker", label: "Markdown Tracker", icon: TrackerIcon },
+  { href: "/support", label: "Support", icon: LifeBuoy },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
+
+const adminNav = { href: "/admin", label: "Admin console", icon: ShieldCheck };
 
 export function AppShell({
   viewer,
   notifications,
   theme,
+  isAdmin = false,
   children,
 }: {
   viewer: Viewer;
   notifications: ShellNotification[];
   theme: "dark" | "light";
+  isAdmin?: boolean;
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -91,12 +98,13 @@ export function AppShell({
         />
       ) : null}
 
-      <Sidebar open={mobileOpen} onClose={() => setMobileOpen(false)} />
+      <Sidebar open={mobileOpen} onClose={() => setMobileOpen(false)} isAdmin={isAdmin} />
 
       <div className="app-main">
         <Header
           viewer={viewer}
           notifications={notifications}
+          isAdmin={isAdmin}
           onOpenSidebar={() => setMobileOpen(true)}
         />
         <main className="page">{children}</main>
@@ -108,9 +116,11 @@ export function AppShell({
 function Sidebar({
   open,
   onClose,
+  isAdmin,
 }: {
   open: boolean;
   onClose: () => void;
+  isAdmin: boolean;
 }) {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
@@ -128,7 +138,7 @@ function Sidebar({
       </Link>
 
       <nav className="sidebar-nav" aria-label="Workspace navigation">
-        {nav.map((item) => {
+        {(isAdmin ? [...nav, adminNav] : nav).map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link
@@ -181,10 +191,12 @@ function Sidebar({
 function Header({
   viewer,
   notifications,
+  isAdmin,
   onOpenSidebar,
 }: {
   viewer: Viewer;
   notifications: ShellNotification[];
+  isAdmin: boolean;
   onOpenSidebar: () => void;
 }) {
   const router = useRouter();
@@ -381,6 +393,14 @@ function Header({
                 <Link href="/settings" className="dropdown-item" onClick={() => setUserOpen(false)}>
                   <User size={14} /> Profile & settings
                 </Link>
+                <Link href="/support" className="dropdown-item" onClick={() => setUserOpen(false)}>
+                  <LifeBuoy size={14} /> Help & support
+                </Link>
+                {isAdmin ? (
+                  <Link href="/admin" className="dropdown-item" onClick={() => setUserOpen(false)}>
+                    <ShieldCheck size={14} /> Admin console
+                  </Link>
+                ) : null}
                 <Link
                   href="/settings?tab=appearance"
                   className="dropdown-item"

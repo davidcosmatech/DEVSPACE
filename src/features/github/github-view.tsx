@@ -161,6 +161,15 @@ export function GitHubView({
                 </span>
                 <span className="meta-item">{result.profile.followers} followers</span>
                 <span className="meta-item">{result.profile.following} following</span>
+                {result.privateOwner ? (
+                  <span
+                    className="meta-item meta-item-private"
+                    title="Private repositories visible only to your account"
+                  >
+                    <Lock size={12} /> {privateSummary?.count ?? 0} private{" "}
+                    {(privateSummary?.count ?? 0) === 1 ? "repo" : "repos"}
+                  </span>
+                ) : null}
                 <span className="meta-item">
                   <CalendarDays size={12} /> Joined {formatDate(result.profile.createdAt)}
                 </span>

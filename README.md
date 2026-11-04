@@ -14,7 +14,7 @@ DEVSPACE is a working Next.js application — not a static dashboard mock-up. Ev
 - **Projects** — full CRUD, public/private sections, workspace grouping, multi-select bulk editing, search, status/technology/workspace filters, priorities, repository links, list and grid views.
 - **Notes** — Markdown editor and preview, autosave with unsaved-change protection, pinning, categories, search and deletion.
 - **GitHub** — live public profile and repository data from the GitHub REST API, with a per-user verified snapshot fallback, plus loading, empty, not-found, rate-limit and network-failure states.
-- **Private repositories** — a full-width Private section on the GitHub page listing the private repositories the connected account owns, read with a server-only read-only token and shown only to that account.
+- **Private repositories** — the GitHub profile header shows the private repository count next to *following*, and a full-width Private section lists the private repositories the connected account owns, read with a server-only read-only token and shown only to that account.
 - **Browser Workspaces** — workspace CRUD and nested link CRUD with URL validation, categories, safe external links and linked project counts.
 - **File Workspace** — real local folders and files through the File System Access API: create workspaces/subfolders/files, import documents, rename, delete and preview supported formats in the browser. Requires Chrome or Edge; browsers cannot launch Windows Explorer or desktop apps.
 - **Markdown Tracker** — real file uploads with byte-level progress, private per-user storage, inline Markdown preview, download, pending records and deletion.

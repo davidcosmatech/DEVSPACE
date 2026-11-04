@@ -1280,6 +1280,15 @@ svg {
   gap: 5px;
 }
 
+.meta-item-private {
+  border: 1px solid rgba(245, 185, 66, 0.26);
+  border-radius: 999px;
+  background: rgba(245, 185, 66, 0.08);
+  padding: 3px 9px;
+  color: var(--warning);
+  font-weight: 560;
+}
+
 .divider {
   height: 1px;
   background: var(--border);

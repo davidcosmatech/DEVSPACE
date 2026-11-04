@@ -37,6 +37,7 @@ import { useTheme } from "@/components/theme-provider";
 import { logoutAction } from "@/features/auth/actions";
 import { persistThemeAction } from "@/features/settings/actions";
 import type { Viewer } from "@/lib/auth";
+import { isTypingTarget } from "@/lib/keyboard";
 import type { ShellNotification } from "@/lib/queries/shell";
 import { cn, relativeTime } from "@/lib/utils";
 
@@ -224,6 +225,8 @@ function Header({
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.isComposing || event.defaultPrevented) return;
+      // Never hijack a field the user is writing in.
+      if (isTypingTarget(event.target) || isTypingTarget(document.activeElement)) return;
       if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "k") return;
       // A dialog already owns the keyboard; do not open search behind it.
       if (document.querySelector('[role="dialog"]')) return;

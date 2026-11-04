@@ -196,3 +196,20 @@ test("keeps keyboard focus while typing in a controlled dialog field", async ({ 
   await expect(content).toHaveValue(/abcdef with spaces/);
   await expect(content).toBeFocused();
 });
+
+test("ignores the global shortcut while the user is typing", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/notes?new=1");
+  const textarea = page.locator(".note-textarea");
+  await textarea.click();
+  await page.keyboard.type("typing before the shortcut", { delay: 40 });
+  await page.keyboard.press("Control+k");
+  await expect(page.locator(".command-panel")).toHaveCount(0);
+  await expect(textarea).toBeFocused();
+  await expect(page.getByRole("button", { name: "Close dialog" })).toHaveCount(0);
+
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.keyboard.press("Control+k");
+  await expect(page.locator(".command-panel")).toBeVisible();
+  await page.keyboard.press("Escape");
+});

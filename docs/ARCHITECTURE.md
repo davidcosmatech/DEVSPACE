@@ -158,7 +158,7 @@ Users reach `/support` from a **My Tickets** sidebar entry (visible to every acc
 
 Dialogs own the keyboard while they are open. `Modal` keeps its `onClose` callback in a ref and runs its focus/escape effect only when `open` changes, so re-renders caused by typing can never move focus back to the close button. The initial focus prefers a field inside `.modal-body`, then a footer action, then the panel itself; it never targets the header close button, and it never steals focus from an element that is already focused inside the dialog. Closing a dialog restores focus to the element that opened it.
 
-The only global shortcut is `Ctrl/Cmd + K`. It ignores key repeats from IME composition, does not open search while a dialog is open, and never intercepts plain typing, `Tab`, `Enter` or `Space`. The command palette handles `Escape`, arrows and `Enter` locally on its input.
+The only global shortcut is `Ctrl/Cmd + K`. It ignores key repeats from IME composition, does not open search while a dialog is open, and is skipped entirely when the event target or the focused element is an `input`, `textarea`, `select` or `contenteditable` surface (`isTypingTarget` in `lib/keyboard`). It never intercepts plain typing, `Tab`, `Enter` or `Space`. The command palette handles `Escape`, arrows and `Enter` locally on its input.
 
 ## Backup and restore
 

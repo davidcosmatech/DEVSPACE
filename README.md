@@ -14,6 +14,7 @@ DEVSPACE is a working Next.js application — not a static dashboard mock-up. Ev
 - **Projects** — full CRUD, public/private sections, workspace grouping, multi-select bulk editing, search, status/technology/workspace filters, priorities, repository links, list and grid views.
 - **Notes** — Markdown editor and preview, autosave with unsaved-change protection, pinning, categories, search and deletion.
 - **GitHub** — live public profile and repository data from the GitHub REST API, with a per-user verified snapshot fallback, plus loading, empty, not-found, rate-limit and network-failure states.
+- **Private repositories** — a full-width Private section on the GitHub page listing the private repositories the connected account owns, read with a server-only read-only token and shown only to that account.
 - **Browser Workspaces** — workspace CRUD and nested link CRUD with URL validation, categories, safe external links and linked project counts.
 - **File Workspace** — real local folders and files through the File System Access API: create workspaces/subfolders/files, import documents, rename, delete and preview supported formats in the browser. Requires Chrome or Edge; browsers cannot launch Windows Explorer or desktop apps.
 - **Markdown Tracker** — real file uploads with byte-level progress, private per-user storage, inline Markdown preview, download, pending records and deletion.
@@ -23,7 +24,7 @@ DEVSPACE is a working Next.js application — not a static dashboard mock-up. Ev
 - **Backup & restore** — versioned JSON format, duplicate detection, no cross-account overwrite, transactional import.
 - **Responsive design** — fixed desktop sidebar, drawer navigation on mobile, single-column cards, responsive tables and touch-friendly controls.
 - **Security** — server-derived ownership on every query, Zod validation, secure HttpOnly sessions, RLS policies for Supabase and private file storage.
-- **Quality gates** — TypeScript, ESLint, 26 unit/integration tests, 9 Playwright end-to-end tests and a production build.
+- **Quality gates** — TypeScript, ESLint, 32 unit/integration tests, 9 Playwright end-to-end tests and a production build.
 
 ## Demo
 
@@ -163,7 +164,8 @@ src/
 │   ├── db/                     Drizzle schema, connection, seed
 │   ├── queries/                shell counts and notifications
 │   ├── validation/             shared Zod schemas
-│   ├── github.ts               GitHub REST client
+│   ├── github.ts               GitHub REST client (public + private)
+│   ├── github-private.ts       private-repository access rules
 │   ├── storage.ts              local/Supabase file adapter
 │   └── utils.ts
 drizzle/                        versioned SQL migrations
@@ -205,6 +207,10 @@ Dark and light themes share the same token system in `src/app/globals.css`. Moti
 | Browser Workspaces | GitHub |
 |---|---|
 | ![Browser Workspaces](docs/screenshots/workspaces.png) | ![GitHub](docs/screenshots/github.png) |
+
+| GitHub — private repositories |
+|---|
+| ![Private repositories](docs/screenshots/github-private.png) |
 
 | Light theme | Mobile |
 |---|---|

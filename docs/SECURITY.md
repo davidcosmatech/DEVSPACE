@@ -85,8 +85,12 @@ The local provider cannot be activated accidentally when Supabase is configured:
 
 ## GitHub data
 
-- Only public GitHub REST API data is requested; no token is required or stored.
-- Successful responses are snapshotted per user in `profiles.github_cache`.
+- Public profile data is read from the GitHub REST API without a token.
+- The GitHub page's **Private** section uses `GITHUB_PRIVATE_TOKEN`, a server-only read-only token. It is never sent to the browser, exposed through an action or route, or logged.
+- Private repositories are returned only when the connected profile username matches the token owner (`canViewPrivateRepos`). Any other connected username receives public data only.
+- The token call asks for `affiliation=owner&visibility=private`, so it can only list repositories the token was explicitly granted.
+- Only repository metadata is displayed; code is never cloned, downloaded or stored by DEVSPACE.
+- Successful responses are snapshotted per user in `profiles.github_cache`; a cached snapshot's private list is released only if the snapshot owner still matches the connected username.
 - When GitHub rate-limits or is unreachable, the last verified snapshot is displayed and labelled as cached. Statistics are never invented.
 - Cache writes occur server-side and are scoped to the authenticated user.
 

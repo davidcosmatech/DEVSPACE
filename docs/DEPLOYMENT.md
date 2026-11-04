@@ -51,6 +51,12 @@ DIRECT_URL=postgresql://postgres.<ref>:<password>@<host>:5432/postgres
 
 SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
 SESSION_SECRET=<48-byte-random-secret>
+
+# Optional: server-only read-only GitHub token powering the GitHub page's
+# "Private" section. Use a fine-grained token that only has read access to the
+# private repositories you want listed. Private data is shown only when the
+# connected GitHub username equals the token owner.
+GITHUB_PRIVATE_TOKEN=<github-fine-grained-read-only-token>
 ```
 
 Never commit `.env.local`, connection strings or keys. `.gitignore` excludes all local environment files.
@@ -195,8 +201,9 @@ After deployment:
 | Storage | Private `markdown-files` bucket, 4 MB limit, 4 owner policies |
 | Auth | Supabase Auth; demo account provisioned and confirmed |
 | Registration | `SUPABASE_SKIP_EMAIL_CONFIRMATION=true`; admin-confirmed signup avoids Supabase's default email rate limit |
+| Private GitHub repos | `GITHUB_PRIVATE_TOKEN` (server-only, read-only) set in Vercel for all environments |
 | Demo workspace | 5 projects, 12 notes, 3 workspaces, 10 tracker records, 8 real uploaded files |
-| Production verification | Login, project CRUD, public/private sections, bulk project updates, workspace assignment, header chat assistant, inline tracker preview, local File Workspace (create/rename/delete/import/preview), Storage upload/download/delete, all pages, theme and export — passed with zero console errors |
+| Production verification | Login, project CRUD, public/private sections, bulk project updates, workspace assignment, header chat assistant, inline tracker preview, local File Workspace (create/rename/delete/import/preview), GitHub private-repository section, Storage upload/download/delete, all pages, theme and export — passed with zero console errors |
 
 ### Remaining dashboard step
 
@@ -225,7 +232,7 @@ GitHub `main` still contains the previous static prototype. The full application
 
 - `npm run typecheck` — passed.
 - `npm run lint` — passed.
-- `npm test` — 26/26 tests passed.
+- `npm test` — 32/32 tests passed.
 - `npm run test:e2e` — 9/9 Playwright flows passed locally.
 - `npm run build` — passed (Next.js 16.4.5).
 - Supabase-mode browser test — login, project CRUD, note autosave/reload, workspace/link CRUD, private Storage upload/download/delete, theme persistence and export passed.

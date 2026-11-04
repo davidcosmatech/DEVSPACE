@@ -105,6 +105,7 @@ The local provider is deliberately isolated behind `isSupabaseAuthEnabled()`. It
 - Workspace layout is `force-dynamic` because the shell is per-user.
 - GitHub calls use `cache: "no-store"` so Refresh reflects live data and never caches one user's view for another.
 - Successful GitHub responses are stored as a per-user snapshot in `profiles.github_cache`. If GitHub is rate limited or unreachable, the UI shows the last verified snapshot with a cached timestamp instead of inventing statistics.
+- The **Private** section adds `privateRepos`/`privateOwner` to the same snapshot. A server-only read-only token (`GITHUB_PRIVATE_TOKEN`) is used, and the list is released only when the connected username equals the token owner. The browser never receives the token and the cached private list is re-gated on every render.
 - Private data is never placed in shared caches.
 - Streaming/Suspense is used for the dashboard GitHub panel so a slow GitHub request does not block the whole dashboard.
 
@@ -179,7 +180,8 @@ Server Actions give a compact, type-safe mutation path with built-in same-origin
 | `lib/db` | Schema, connection switching, seed, data directory |
 | `lib/validation` | Shared client/server schemas |
 | `lib/storage` | Private local/Supabase file operations |
-| `lib/github` | Public GitHub REST client and error classification |
+| `lib/github` | GitHub REST client, public + token-gated private repositories, error classification |
+| `lib/github-private` | Pure private-repository access rules and summaries (unit tested) |
 | `app/api/assistant` | Read-only workspace chat answers |
 | `features/*/actions.ts` | Authorized mutations |
 | `features/*/*-view.tsx` | Interactive UI |

@@ -5,8 +5,11 @@ import { useRouter } from "next/navigation";
 import {
   ArrowUpRight,
   CalendarDays,
+  CircleDot,
+  GitBranch,
   GitFork,
   Loader2,
+  Lock,
   RefreshCw,
   Star,
   Unplug,
@@ -19,7 +22,8 @@ import { Github } from "@/components/icons/github";
 import { Avatar } from "@/components/ui/avatar";
 import { refreshGitHubAction, saveGitHubUsernameAction } from "@/features/github/actions";
 import type { GitHubDisplayResult } from "@/lib/github";
-import { formatDate, relativeTime } from "@/lib/utils";
+import { summarizePrivateRepos } from "@/lib/github-private";
+import { formatBytes, formatDate, relativeTime } from "@/lib/utils";
 
 export function GitHubView({
   username,
@@ -34,6 +38,7 @@ export function GitHubView({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [refreshing, setRefreshing] = useState(false);
+  const privateSummary = result?.ok ? summarizePrivateRepos(result.privateRepos) : null;
 
   async function save(event: React.FormEvent) {
     event.preventDefault();
@@ -80,7 +85,7 @@ export function GitHubView({
         eyebrow="Integration"
         icon={Github}
         title="GitHub"
-        description="Live public profile and repository data from the GitHub REST API — no token required."
+        description="Live profile and repositories from the GitHub REST API, plus the private repositories your read-only token can see."
         actions={
           <button type="button" className="btn btn-secondary" onClick={refresh} disabled={refreshing}>
             {refreshing ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
@@ -268,6 +273,140 @@ export function GitHubView({
               ))}
             </div>
           )}
+
+          {result.privateOwner ? (
+            <section className="github-private" aria-labelledby="github-private-title">
+              <div className="github-private-head">
+                <div className="github-private-title">
+                  <span className="github-private-lock">
+                    <Lock size={15} />
+                  </span>
+                  <div>
+                    <h2 id="github-private-title">Private</h2>
+                    <p>
+                      {privateSummary?.count ?? 0} private{" "}
+                      {(privateSummary?.count ?? 0) === 1 ? "repository" : "repositories"} from @
+                      {result.privateOwner} · visible only in your account
+                    </p>
+                  </div>
+                </div>
+                <div className="github-private-flags">
+                  <span className="badge badge-amber">
+                    <Lock size={10} /> Only you
+                  </span>
+                  <a
+                    href="https://github.com/settings/repositories"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="panel-link"
+                  >
+                    Manage access <ArrowUpRight size={12} />
+                  </a>
+                </div>
+              </div>
+
+              <div className="github-private-stats">
+                <div className="github-private-stat">
+                  <span>Repositories</span>
+                  <strong>{privateSummary?.count ?? 0}</strong>
+                </div>
+                <div className="github-private-stat">
+                  <span>Languages</span>
+                  <strong>{privateSummary?.languages.join(" · ") || "—"}</strong>
+                </div>
+                <div className="github-private-stat">
+                  <span>Last activity</span>
+                  <strong>
+                    {privateSummary?.lastUpdatedAt
+                      ? relativeTime(privateSummary.lastUpdatedAt)
+                      : "—"}
+                  </strong>
+                </div>
+                <div className="github-private-stat">
+                  <span>Access</span>
+                  <strong>Read-only token</strong>
+                </div>
+              </div>
+
+              {result.privateWarning ? (
+                <p className="github-private-warning">{result.privateWarning}</p>
+              ) : null}
+
+              {result.privateRepos.length === 0 ? (
+                <div className="github-private-empty">
+                  <span className="empty-icon">
+                    <Lock size={19} />
+                  </span>
+                  <div>
+                    <h3>No private repositories are shared with DEVSPACE</h3>
+                    <p>
+                      The read-only GitHub token can only read repositories explicitly granted to
+                      it. Open <strong>Manage access</strong> to add the private repositories you
+                      want listed here.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="private-repo-list">
+                  {result.privateRepos.map((repo) => (
+                    <a
+                      key={repo.id}
+                      href={repo.htmlUrl}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="private-repo-row"
+                    >
+                      <div className="private-repo-main">
+                        <div className="private-repo-name">
+                          <Lock size={13} />
+                          {repo.name}
+                          <span className="badge badge-amber">Private</span>
+                          {repo.fork ? <span className="badge badge-slate">Fork</span> : null}
+                        </div>
+                        <p className="private-repo-desc">
+                          {repo.description || "No description provided."}
+                        </p>
+                        <div className="private-repo-tags">
+                          {repo.language ? (
+                            <span>
+                              <span className="language-dot" /> {repo.language}
+                            </span>
+                          ) : null}
+                          <span>
+                            <GitBranch size={11} /> {repo.defaultBranch ?? "main"}
+                          </span>
+                          <span>
+                            <Star size={11} /> {repo.stars}
+                          </span>
+                          <span>
+                            <GitFork size={11} /> {repo.forks}
+                          </span>
+                          <span>
+                            <CircleDot size={11} /> {repo.openIssues ?? 0} open issues
+                          </span>
+                          <span>{formatBytes((repo.sizeKb ?? 0) * 1024)}</span>
+                        </div>
+                      </div>
+                      <div className="private-repo-side">
+                        <span className="private-repo-updated">
+                          Updated {relativeTime(repo.updatedAt)}
+                        </span>
+                        <span className="btn btn-secondary btn-sm">
+                          Open <ArrowUpRight size={13} />
+                        </span>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              )}
+
+              <p className="github-private-note">
+                Private repository metadata is read on the server with a read-only GitHub token,
+                filtered to {result.privateOwner}&apos;s account and never cached in the browser or
+                shown to other DEVSPACE users. Repository code is not copied into DEVSPACE.
+              </p>
+            </section>
+          ) : null}
 
           <p style={{ marginTop: 18, color: "var(--muted)", fontSize: 10 }}>
             Public GitHub API data. Rate limits and outages are shown without inventing statistics.

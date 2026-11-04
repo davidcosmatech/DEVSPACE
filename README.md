@@ -17,6 +17,7 @@ DEVSPACE is a working Next.js application — not a static dashboard mock-up. Ev
 - **Browser Workspaces** — workspace CRUD and nested link CRUD with URL validation, categories, safe external links and linked project counts.
 - **Markdown Tracker** — real file uploads with byte-level progress, private per-user storage, inline Markdown preview, download, pending records and deletion.
 - **Workspace chat** — a header chat assistant that answers questions from the signed-in user's real projects, notes, workspaces, files and GitHub status.
+- **Header tools** — global search/command palette, notifications, account menu, workspace chat and a live local clock.
 - **Settings** — profile and avatar management, persistent dark/light themes, locale preference, JSON export, safe import preview and account deletion.
 - **Backup & restore** — versioned JSON format, duplicate detection, no cross-account overwrite, transactional import.
 - **Responsive design** — fixed desktop sidebar, drawer navigation on mobile, single-column cards, responsive tables and touch-friendly controls.

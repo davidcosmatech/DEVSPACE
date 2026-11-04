@@ -515,6 +515,33 @@ svg {
   color: var(--accent);
 }
 
+.topbar-clock {
+  display: flex;
+  height: 44px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--card-soft);
+  padding: 0 12px;
+  color: var(--accent);
+}
+
+.clock-time {
+  color: var(--text-soft);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: 0.015em;
+}
+
+.clock-seconds {
+  color: var(--muted);
+  font-weight: 500;
+}
+
 .chat-panel {
   position: fixed;
   z-index: 95;
@@ -3830,6 +3857,17 @@ svg {
   .topbar-user > svg:last-child {
     display: none;
   }
+  .clock-seconds {
+    display: none;
+  }
+  .topbar-clock {
+    height: 38px;
+    padding: 0 9px;
+    gap: 5px;
+  }
+  .clock-time {
+    font-size: 11px;
+  }
   .search-trigger {
     width: auto;
     flex: 1;
@@ -3935,6 +3973,12 @@ svg {
     justify-content: center;
   }
   .chat-trigger span {
+    display: none;
+  }
+  .topbar-clock {
+    padding: 0 8px;
+  }
+  .topbar-clock > svg {
     display: none;
   }
   .chat-panel {

@@ -28,6 +28,7 @@ import { BrandLockup } from "@/components/brand";
 import { Github } from "@/components/icons/github";
 import { BrowserWorkspaceIcon, TrackerIcon } from "@/components/icons/nav-icons";
 import { ChatPanel } from "@/components/layout/chat-panel";
+import { HeaderClock } from "@/components/layout/header-clock";
 import { Avatar } from "@/components/ui/avatar";
 import { useTheme } from "@/components/theme-provider";
 import { logoutAction } from "@/features/auth/actions";
@@ -260,6 +261,8 @@ function Header({
           <MessageCircle size={17} />
           <span>Chat</span>
         </button>
+
+        <HeaderClock />
 
         <div className="topbar-right">
           <div ref={bellRef} style={{ position: "relative" }}>

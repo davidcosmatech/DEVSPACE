@@ -19,7 +19,7 @@ DEVSPACE is a working Next.js application — not a static dashboard mock-up. Ev
 - **File Workspace** — real local folders and files through the File System Access API: create workspaces/subfolders/files, import documents, rename, delete and preview supported formats in the browser. Requires Chrome or Edge; browsers cannot launch Windows Explorer or desktop apps.
 - **Markdown Tracker** — real file uploads with byte-level progress, private per-user storage, inline Markdown preview, download, pending records and deletion.
 - **Workspace chat** — a header chat assistant that answers questions from the signed-in user's real projects, notes, workspaces, files and GitHub status.
-- **Support tickets** — every user can open a ticket from `/support` and follow the administrator reply and status.
+- **Support tickets** — a **My Tickets** section in the sidebar (with an open-ticket counter) plus `/support`, where every user can open a ticket and follow the administrator reply and status. Replies also appear in the notification bell.
 - **Admin console** — restricted to accounts with the `admin` role, with a shield shortcut next to the header bell. Includes real usage (people, active today/week, new signups), full user management (promote/demote, suspend/reactivate, typed-`DELETE` deletion) and the support queue with replies and status changes.
 - **Header tools** — global search/command palette, notifications, admin shortcut (admins only), account menu, workspace chat and a live local clock.
 - **Settings** — profile and avatar management, persistent dark/light themes, locale preference, JSON export, safe import preview and account deletion.
@@ -201,6 +201,10 @@ Dark and light themes share the same token system in `src/app/globals.css`. Moti
 | Admin console — tickets | User support |
 |---|---|
 | ![Admin ticket](docs/screenshots/admin-ticket.png) | ![Support](docs/screenshots/support-tickets.png) |
+
+| My Tickets in the sidebar |
+|---|
+| ![My Tickets](docs/screenshots/sidebar-my-tickets.png) |
 
 | Markdown preview | Workspaces with projects |
 |---|---|

@@ -16,7 +16,7 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
   const db = await getDb();
   const rows = await db.select().from(userSettings).where(eq(userSettings.userId, viewer.id)).limit(1);
   const theme = rows[0]?.theme === "light" ? "light" : "dark";
-  const { notifications } = await getShellData(viewer.id, viewer.githubUsername);
+  const { notifications, openTickets } = await getShellData(viewer.id, viewer.githubUsername);
 
   return (
     <AppShell
@@ -24,6 +24,7 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
       notifications={notifications}
       theme={theme}
       isAdmin={viewerIsAdmin(viewer)}
+      openTickets={openTickets}
     >
       {children}
     </AppShell>

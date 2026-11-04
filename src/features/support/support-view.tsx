@@ -46,7 +46,7 @@ export function SupportView({ tickets }: { tickets: SupportTicket[] }) {
       <PageHeader
         eyebrow="Help desk"
         icon={LifeBuoy}
-        title="Support"
+        title="My tickets"
         description="Open a ticket for the workspace administrator and follow the reply in one place."
       />
 

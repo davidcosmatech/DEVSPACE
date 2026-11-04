@@ -207,7 +207,7 @@ After deployment:
 | Admin access | `profiles.role = 'admin'` only; promoted from `/admin` (no email allow-list) |
 | Usage metrics | Derived from `profiles.last_seen_at` (throttled presence) and existing records; no analytics vendor |
 | Demo workspace | 5 projects, 12 notes, 3 workspaces, 10 tracker records, 8 real uploaded files |
-| Production verification | Login, project CRUD, public/private sections, bulk project updates, workspace assignment, header chat assistant, inline tracker preview, local File Workspace (create/rename/delete/import/preview), GitHub private-repository section, admin console and support tickets, Storage upload/download/delete, all pages, theme and export — passed with zero console errors |
+| Production verification | Login, project CRUD, public/private sections, bulk project updates, workspace assignment, header chat assistant, inline tracker preview, local File Workspace (create/rename/delete/import/preview), GitHub private-repository section, My Tickets sidebar section with open-ticket counter, admin console and support tickets, Storage upload/download/delete, all pages, theme and export — passed with zero console errors |
 
 ### Promoting an administrator
 

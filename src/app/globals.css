@@ -5619,3 +5619,20 @@ svg {
   background: var(--accent-soft);
   color: var(--accent-bright);
 }
+
+/* Ticket counter in the sidebar */
+.sidebar-badge {
+  display: inline-grid;
+  min-width: 19px;
+  height: 19px;
+  place-items: center;
+  margin-left: auto;
+  border: 1px solid var(--accent-ring);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  padding: 0 6px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+}

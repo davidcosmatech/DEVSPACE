@@ -1,7 +1,7 @@
 import { count, desc, eq } from "drizzle-orm";
 
 import { getDb } from "@/lib/db";
-import { notes, projects, trackerFiles, workspaces } from "@/lib/db/schema";
+import { notes, projects, tickets, trackerFiles, workspaces } from "@/lib/db/schema";
 
 export type ShellNotification = {
   id: string;
@@ -9,7 +9,7 @@ export type ShellNotification = {
   detail: string;
   href: string;
   time: Date;
-  tone: "project" | "note" | "tracker" | "github";
+  tone: "project" | "note" | "tracker" | "github" | "ticket";
 };
 
 export type ShellCounts = {
@@ -45,6 +45,27 @@ export async function getShellData(userId: string, githubUsername: string | null
 
   const uploads = trackerRows.filter((row) => row.uploadStatus === "uploaded").length;
   const pendingUploads = trackerRows.length - uploads;
+
+  const ticketRows = await db
+    .select({
+      id: tickets.id,
+      subject: tickets.subject,
+      status: tickets.status,
+      adminReply: tickets.adminReply,
+      repliedAt: tickets.repliedAt,
+      updatedAt: tickets.updatedAt,
+    })
+    .from(tickets)
+    .where(eq(tickets.userId, userId))
+    .orderBy(desc(tickets.updatedAt))
+    .limit(50);
+
+  const openTickets = ticketRows.filter(
+    (ticket) => ticket.status === "open" || ticket.status === "in_progress",
+  ).length;
+  const repliedTickets = ticketRows
+    .filter((ticket) => ticket.adminReply && ticket.status !== "closed")
+    .slice(0, 2);
 
   const counts: ShellCounts = {
     projects: Number(projectCount[0]?.value ?? 0),
@@ -97,5 +118,16 @@ export async function getShellData(userId: string, githubUsername: string | null
     });
   }
 
-  return { counts, notifications };
+  for (const ticket of repliedTickets) {
+    notifications.unshift({
+      id: `ticket-reply-${ticket.id}`,
+      title: "Support replied to your ticket",
+      detail: ticket.subject,
+      href: "/support",
+      time: ticket.repliedAt ?? ticket.updatedAt,
+      tone: "ticket",
+    });
+  }
+
+  return { counts, notifications: notifications.slice(0, 6), openTickets };
 }

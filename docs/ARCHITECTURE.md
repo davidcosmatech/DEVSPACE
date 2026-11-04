@@ -148,11 +148,11 @@ The browser sandbox intentionally prevents launching Windows Explorer, Word, PDF
 
 Activity is measured without third-party analytics: `requireViewer()` refreshes `profiles.last_seen_at` at most once every five minutes per user. Daily/weekly totals are derived from that column; no tracking scripts or cookies are involved.
 
-Every page calls `requireAdminViewer()` and every action calls `assertAdmin()`. Authorisation is the database `profiles.role = 'admin'` — there is no email allow-list, so only explicitly promoted accounts can open the console. Non-admins are redirected to the dashboard and actions throw.
+Every page calls `requireAdminViewer()` and every action calls `assertAdmin()`. Authorisation is the database `profiles.role = 'admin'` â€” there is no email allow-list, so only explicitly promoted accounts can open the console. Non-admins are redirected to the dashboard and actions throw.
 
 Suspension is enforced server-side: suspended viewers are redirected to `/suspended`, local sign-in is rejected, and Supabase accounts are additionally banned through the Admin API. Deleting a user removes the Supabase Auth identity, the cascaded profile data and the user's stored files.
 
-Users reach `/support` from the sidebar or the account menu. They create a ticket (subject, priority, message) and see the administrator's reply and current status; they can never read another user's tickets.
+Users reach `/support` from a **My Tickets** sidebar entry (visible to every account) or the account menu. The sidebar shows a counter for open/in-progress tickets, and administrator replies surface in the notification bell. They create a ticket (subject, priority, message) and see the administrator's reply and current status; they can never read another user's tickets.
 
 ## Backup and restore
 

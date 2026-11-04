@@ -12,7 +12,6 @@ import {
   HardDrive,
   House,
   LayoutDashboard,
-  LifeBuoy,
   LogOut,
   Menu,
   MessageCircle,
@@ -22,6 +21,7 @@ import {
   Settings,
   ShieldCheck,
   Sun,
+  Ticket,
   UploadCloud,
   User,
   X,
@@ -48,7 +48,7 @@ const nav = [
   { href: "/workspaces", label: "Browser Workspaces", icon: BrowserWorkspaceIcon },
   { href: "/files", label: "File Workspace", icon: HardDrive },
   { href: "/tracker", label: "Markdown Tracker", icon: TrackerIcon },
-  { href: "/support", label: "Support", icon: LifeBuoy },
+  { href: "/support", label: "My Tickets", icon: Ticket },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -59,12 +59,14 @@ export function AppShell({
   notifications,
   theme,
   isAdmin = false,
+  openTickets = 0,
   children,
 }: {
   viewer: Viewer;
   notifications: ShellNotification[];
   theme: "dark" | "light";
   isAdmin?: boolean;
+  openTickets?: number;
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -98,7 +100,12 @@ export function AppShell({
         />
       ) : null}
 
-      <Sidebar open={mobileOpen} onClose={() => setMobileOpen(false)} isAdmin={isAdmin} />
+      <Sidebar
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        isAdmin={isAdmin}
+        openTickets={openTickets}
+      />
 
       <div className="app-main">
         <Header
@@ -117,10 +124,12 @@ function Sidebar({
   open,
   onClose,
   isAdmin,
+  openTickets,
 }: {
   open: boolean;
   onClose: () => void;
   isAdmin: boolean;
+  openTickets: number;
 }) {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
@@ -150,6 +159,9 @@ function Sidebar({
             >
               <item.icon size={22} strokeWidth={1.8} />
               {item.label}
+              {item.href === "/support" && openTickets > 0 ? (
+                <span className="sidebar-badge">{openTickets}</span>
+              ) : null}
             </Link>
           );
         })}
@@ -404,7 +416,7 @@ function Header({
                   <User size={14} /> Profile & settings
                 </Link>
                 <Link href="/support" className="dropdown-item" onClick={() => setUserOpen(false)}>
-                  <LifeBuoy size={14} /> Help & support
+                  <Ticket size={14} /> My tickets
                 </Link>
                 {isAdmin ? (
                   <Link href="/admin" className="dropdown-item" onClick={() => setUserOpen(false)}>
@@ -447,7 +459,9 @@ function NotificationIcon({ tone }: { tone: ShellNotification["tone"] }) {
         ? FileText
         : tone === "github"
           ? Github
-          : UploadCloud;
+          : tone === "ticket"
+            ? Ticket
+            : UploadCloud;
   return (
     <span
       style={{

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { loginSchema, registerSchema, resetPasswordSchema } from "@/lib/validation/auth";
 import { backupSchema } from "@/lib/validation/backup";
 import { projectSchema } from "@/lib/validation/project";
-import { profileSchema } from "@/lib/validation/settings";
+import { changePasswordSchema, profileSchema } from "@/lib/validation/settings";
 import { workspaceLinkSchema, workspaceSchema } from "@/lib/validation/workspace";
 
 describe("authentication validation", () => {
@@ -169,5 +169,48 @@ describe("backup validation", () => {
       backupSchema.safeParse({ app: "DEVSPACE", schemaVersion: 2, exportedAt: new Date().toISOString() })
         .success,
     ).toBe(false);
+  });
+});
+
+
+describe("change password validation", () => {
+  const base = {
+    currentPassword: "OldPass123",
+    newPassword: "NewPass456",
+    confirmPassword: "NewPass456",
+  };
+
+  it("accepts a valid change", () => {
+    expect(changePasswordSchema.safeParse(base).success).toBe(true);
+  });
+
+  it("requires all fields", () => {
+    expect(changePasswordSchema.safeParse({ ...base, currentPassword: "" }).success).toBe(false);
+    expect(changePasswordSchema.safeParse({ ...base, newPassword: "" }).success).toBe(false);
+    expect(changePasswordSchema.safeParse({ ...base, confirmPassword: "" }).success).toBe(false);
+  });
+
+  it("rejects mismatched confirmation", () => {
+    const parsed = changePasswordSchema.safeParse({ ...base, confirmPassword: "Different456" });
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(parsed.error.issues[0]?.message).toBe("Passwords do not match.");
+    }
+  });
+
+  it("rejects weak new passwords", () => {
+    expect(changePasswordSchema.safeParse({ ...base, newPassword: "weak", confirmPassword: "weak" }).success).toBe(false);
+  });
+
+  it("rejects reusing the current password", () => {
+    const parsed = changePasswordSchema.safeParse({
+      currentPassword: "OldPass123",
+      newPassword: "OldPass123",
+      confirmPassword: "OldPass123",
+    });
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(parsed.error.issues[0]?.message).toContain("different from your current");
+    }
   });
 });

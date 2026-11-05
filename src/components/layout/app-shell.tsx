@@ -58,7 +58,6 @@ const nav = [
 ];
 
 const adminNav = [
-  { href: "/admin", label: "Admin console", icon: ShieldCheck, permission: null },
   { href: "/admin?tab=users", label: "User management", icon: Users, permission: "users.manage" },
   { href: "/admin?tab=roles", label: "Roles & permissions", icon: KeyRound, permission: "roles.manage" },
 ] as const;
@@ -760,6 +759,7 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
+
 
 
 

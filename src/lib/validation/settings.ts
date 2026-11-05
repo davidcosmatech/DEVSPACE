@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { passwordSchema } from "@/lib/validation/auth";
+
 export const languages = [
   { value: "en", label: "English" },
   { value: "es", label: "Español" },
@@ -53,6 +55,22 @@ export const deleteAccountSchema = z.object({
   password: z.string().min(1, "Enter your password."),
 });
 
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Enter your current password.").max(128),
+    newPassword: passwordSchema,
+    confirmPassword: z.string().min(1, "Confirm your new password."),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"],
+  })
+  .refine((data) => data.newPassword !== data.currentPassword, {
+    message: "Choose a password different from your current one.",
+    path: ["newPassword"],
+  });
+
 export type ProfileInput = z.infer<typeof profileSchema>;
 export type AppearanceInput = z.infer<typeof appearanceSchema>;
 export type DeleteAccountInput = z.infer<typeof deleteAccountSchema>;
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;

@@ -258,3 +258,50 @@ test("a normal member cannot reach the admin console", async ({ page }) => {
   await expect(page).toHaveURL(/\/dashboard/);
   await expect(page.getByRole("heading", { name: "Admin console" })).toHaveCount(0);
 });
+
+test("changes the password after re-authenticating", async ({ page }) => {
+  const email = `password-${suffix}@example.com`;
+  const username = `password${suffix}`;
+  const oldPassword = "MemberPass123";
+  const newPassword = "MemberPass456";
+
+  await page.goto("/register");
+  await page.locator("#displayName").fill("Password Test");
+  await page.locator("#username").fill(username);
+  await page.locator("#email").fill(email);
+  await page.locator("#password").fill(oldPassword);
+  await page.locator("#confirmPassword").fill(oldPassword);
+  await page.getByRole("button", { name: /Create account/ }).click();
+  await page.waitForURL("**/dashboard", { timeout: 60_000 });
+
+  await page.goto("/settings?tab=account");
+  await page.getByRole("button", { name: "Change Password" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+
+  await dialog.locator("#current-password").fill("WrongPass123");
+  await dialog.locator("#new-password").fill(newPassword);
+  await dialog.locator("#confirm-password").fill(newPassword);
+  await dialog.getByRole("button", { name: "Save New Password" }).click();
+  await expect(dialog.getByText("Current password is incorrect.")).toBeVisible();
+
+  await dialog.locator("#current-password").fill(oldPassword);
+  await dialog.locator("#new-password").fill(newPassword);
+  await dialog.locator("#confirm-password").fill("MismatchPass456");
+  await dialog.getByRole("button", { name: "Save New Password" }).click();
+  await expect(dialog.getByText("Passwords do not match.")).toBeVisible();
+
+  await dialog.locator("#confirm-password").fill(newPassword);
+  await dialog.getByRole("button", { name: "Save New Password" }).click();
+  await expect(page.getByText("Your password has been updated successfully.")).toBeVisible();
+  await expect(dialog).toHaveCount(0);
+
+  await page.goto("/settings?tab=account");
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await page.waitForURL("**/login", { timeout: 60_000 });
+  await page.locator("#email").fill(email);
+  await page.locator("#password").fill(newPassword);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.waitForURL("**/dashboard", { timeout: 60_000 });
+  await expect(page.getByRole("heading", { name: /Welcome back/ })).toBeVisible();
+});

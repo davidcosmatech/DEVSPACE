@@ -56,6 +56,16 @@ The local provider cannot be activated accidentally when Supabase is configured:
 - Account deletion requires the `DELETE` confirmation phrase, removes the Auth identity first, then cascades profile data and deletes the user's stored files.
 - `tickets` has RLS enabled with owner-only policies, so a browser client can only read or create its own tickets.
 
+## Password changes
+
+- Settings → Account exposes a **Password & Security** card and a modal with current, new and confirmation fields.
+- The server re-authenticates the signed-in user with their email and current password (`signInWithPassword`) before calling `supabase.auth.updateUser({ password })`. A failed re-authentication returns “Current password is incorrect.” and performs no update.
+- Only the authenticated viewer's own password is affected; no user id is accepted from the browser for this action.
+- Passwords are never written to PostgreSQL, LocalStorage, sessionStorage, cookies or logs. With Supabase Auth the password lives only in Supabase; in the local development provider only a scrypt hash is stored.
+- The new password must satisfy the shared password policy, match the confirmation and differ from the current password; Zod validates all fields on the server as well as the client.
+- A successful change keeps the existing session valid, clears the fields, closes the modal and shows “Your password has been updated successfully.”
+- Service-role credentials are not used or exposed by this flow.
+
 ## Login email changes
 
 - Only administrators with `users.manage` can change a login email; the action re-checks the database role before running.

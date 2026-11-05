@@ -10,13 +10,14 @@ import {
   isSupabaseAuthEnabled,
   requireViewer,
 } from "@/lib/auth";
-import { verifyPassword } from "@/lib/auth/password";
+import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { clearSessionCookie } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { localAccounts, profiles, trackerFiles, userSettings } from "@/lib/db/schema";
 import { deleteStoredFile } from "@/lib/storage";
 import {
   appearanceSchema,
+  changePasswordSchema,
   deleteAccountSchema,
   profileSchema,
 } from "@/lib/validation/settings";
@@ -96,6 +97,55 @@ export async function persistThemeAction(theme: "dark" | "light") {
   return { ok: true };
 }
 
+export async function changePasswordAction(input: unknown): Promise<SettingsActionResult> {
+  const viewer = await requireViewer();
+  const parsed = changePasswordSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the password fields." };
+  }
+
+  if (isSupabaseAuthEnabled()) {
+    const supabase = await createSupabaseServerClient();
+    if (!supabase) return { ok: false, error: "Authentication is not configured." };
+
+    // Re-authenticate the signed-in user before changing the password.
+    const { error: reauthError } = await supabase.auth.signInWithPassword({
+      email: viewer.email,
+      password: parsed.data.currentPassword,
+    });
+    if (reauthError) {
+      return { ok: false, error: "Current password is incorrect." };
+    }
+
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: parsed.data.newPassword,
+    });
+    if (updateError) {
+      return { ok: false, error: updateError.message || "Could not update the password." };
+    }
+
+    return { ok: true, message: "Your password has been updated successfully." };
+  }
+
+  const db = await getDb();
+  const accounts = await db
+    .select({ passwordHash: localAccounts.passwordHash })
+    .from(localAccounts)
+    .where(eq(localAccounts.id, viewer.id))
+    .limit(1);
+  const account = accounts[0];
+  if (!account || !(await verifyPassword(parsed.data.currentPassword, account.passwordHash))) {
+    return { ok: false, error: "Current password is incorrect." };
+  }
+
+  const passwordHash = await hashPassword(parsed.data.newPassword);
+  await db
+    .update(localAccounts)
+    .set({ passwordHash })
+    .where(eq(localAccounts.id, viewer.id));
+
+  return { ok: true, message: "Your password has been updated successfully." };
+}
 export async function deleteAccountAction(input: unknown): Promise<SettingsActionResult> {
   const viewer = await requireViewer();
   const parsed = deleteAccountSchema.safeParse(input);
@@ -159,3 +209,4 @@ export async function deleteAccountAction(input: unknown): Promise<SettingsActio
   await clearSessionCookie();
   return { ok: true, message: "Account deleted." };
 }
+

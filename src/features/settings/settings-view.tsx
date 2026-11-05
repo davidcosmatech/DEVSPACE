@@ -10,8 +10,11 @@ import {
   Check,
   Database,
   Download,
+  Eye,
+  EyeOff,
   FileJson,
   Loader2,
+  Lock,
   LogOut,
   Moon,
   Palette,
@@ -30,6 +33,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { useTheme } from "@/components/theme-provider";
 import { logoutAction } from "@/features/auth/actions";
 import {
+  changePasswordAction,
   deleteAccountAction,
   updateAppearanceAction,
   updateProfileAction,
@@ -39,6 +43,8 @@ import type { UserSettings } from "@/lib/db/schema";
 import {
   appearanceSchema,
   type AppearanceInput,
+  changePasswordSchema,
+  type ChangePasswordInput,
   deleteAccountSchema,
   type DeleteAccountInput,
   languages,
@@ -577,6 +583,55 @@ function AccountSection({ viewer, localMode }: { viewer: Viewer; localMode: bool
     defaultValues: { confirmation: "", password: "" },
   });
   const [deleting, setDeleting] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordValues, setPasswordValues] = useState<ChangePasswordInput>({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  function closePasswordModal() {
+    setPasswordOpen(false);
+    setPasswordValues({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    setPasswordErrors({});
+    setShowCurrentPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
+  }
+
+  async function changePassword(event: React.FormEvent) {
+    event.preventDefault();
+    const parsed = changePasswordSchema.safeParse(passwordValues);
+    if (!parsed.success) {
+      const nextErrors: Record<string, string> = {};
+      for (const issue of parsed.error.issues) {
+        const field = String(issue.path[0] ?? "form");
+        if (!nextErrors[field]) nextErrors[field] = issue.message;
+      }
+      setPasswordErrors(nextErrors);
+      return;
+    }
+
+    setPasswordSaving(true);
+    setPasswordErrors({});
+    try {
+      const result = await changePasswordAction(parsed.data);
+      if (!result.ok) {
+        setPasswordErrors({ form: result.error ?? "Could not update the password." });
+        toast.error(result.error ?? "Could not update the password.");
+        return;
+      }
+      toast.success("Your password has been updated successfully.");
+      closePasswordModal();
+    } finally {
+      setPasswordSaving(false);
+    }
+  }
 
   async function logout() {
     setLoggingOut(true);
@@ -635,6 +690,31 @@ function AccountSection({ viewer, localMode }: { viewer: Viewer; localMode: bool
         </div>
       </section>
 
+      <section className="settings-section">
+        <div className="settings-section-head">
+          <h2>Password &amp; Security</h2>
+          <p>Manage your account password and keep your account secure.</p>
+        </div>
+        <div className="settings-section-body">
+          <div className="data-action" style={{ alignItems: "center" }}>
+            <span className="file-icon">
+              <Lock size={17} />
+            </span>
+            <div className="data-action-copy">
+              <strong>Account password</strong>
+              <p>Use a strong password you do not reuse anywhere else.</p>
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => setPasswordOpen(true)}
+            >
+              <Lock size={13} /> Change Password
+            </button>
+          </div>
+        </div>
+      </section>
+
       <section className="settings-section danger-zone">
         <div className="settings-section-head">
           <h2>Danger zone</h2>
@@ -658,6 +738,132 @@ function AccountSection({ viewer, localMode }: { viewer: Viewer; localMode: bool
           </div>
         </div>
       </section>
+
+      <Modal
+        open={passwordOpen}
+        onClose={() => !passwordSaving && closePasswordModal()}
+        title="Change password"
+        description="Confirm your current password, then choose a new one."
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={closePasswordModal}
+              disabled={passwordSaving}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="change-password-form"
+              className="btn btn-primary"
+              disabled={passwordSaving}
+            >
+              {passwordSaving ? <Loader2 size={15} className="animate-spin" /> : <Lock size={15} />}
+              {passwordSaving ? "Saving…" : "Save New Password"}
+            </button>
+          </>
+        }
+      >
+        <form id="change-password-form" className="form-stack" onSubmit={changePassword} noValidate>
+          {passwordErrors.form ? (
+            <div className="form-error" role="alert">
+              <ShieldAlert size={15} /> {passwordErrors.form}
+            </div>
+          ) : null}
+
+          <div className="field">
+            <label className="label" htmlFor="current-password">
+              Current password
+            </label>
+            <div className="password-wrap">
+              <input
+                id="current-password"
+                type={showCurrentPassword ? "text" : "password"}
+                className="input"
+                autoComplete="current-password"
+                value={passwordValues.currentPassword}
+                onChange={(event) =>
+                  setPasswordValues((current) => ({ ...current, currentPassword: event.target.value }))
+                }
+                aria-invalid={Boolean(passwordErrors.currentPassword)}
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowCurrentPassword((current) => !current)}
+                aria-label={showCurrentPassword ? "Hide current password" : "Show current password"}
+              >
+                {showCurrentPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+            {passwordErrors.currentPassword ? (
+              <span className="field-error">{passwordErrors.currentPassword}</span>
+            ) : null}
+          </div>
+
+          <div className="field">
+            <label className="label" htmlFor="new-password">
+              New password <span className="label-hint">8+ chars, upper, lower & number</span>
+            </label>
+            <div className="password-wrap">
+              <input
+                id="new-password"
+                type={showNewPassword ? "text" : "password"}
+                className="input"
+                autoComplete="new-password"
+                value={passwordValues.newPassword}
+                onChange={(event) =>
+                  setPasswordValues((current) => ({ ...current, newPassword: event.target.value }))
+                }
+                aria-invalid={Boolean(passwordErrors.newPassword)}
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowNewPassword((current) => !current)}
+                aria-label={showNewPassword ? "Hide new password" : "Show new password"}
+              >
+                {showNewPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+            {passwordErrors.newPassword ? (
+              <span className="field-error">{passwordErrors.newPassword}</span>
+            ) : null}
+          </div>
+
+          <div className="field">
+            <label className="label" htmlFor="confirm-password">
+              Confirm new password
+            </label>
+            <div className="password-wrap">
+              <input
+                id="confirm-password"
+                type={showConfirmPassword ? "text" : "password"}
+                className="input"
+                autoComplete="new-password"
+                value={passwordValues.confirmPassword}
+                onChange={(event) =>
+                  setPasswordValues((current) => ({ ...current, confirmPassword: event.target.value }))
+                }
+                aria-invalid={Boolean(passwordErrors.confirmPassword)}
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowConfirmPassword((current) => !current)}
+                aria-label={showConfirmPassword ? "Hide password confirmation" : "Show password confirmation"}
+              >
+                {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+            {passwordErrors.confirmPassword ? (
+              <span className="field-error">{passwordErrors.confirmPassword}</span>
+            ) : null}
+          </div>
+        </form>
+      </Modal>
 
       <Modal
         open={deleteOpen}
@@ -735,3 +941,5 @@ function AccountSection({ viewer, localMode }: { viewer: Viewer; localMode: bool
     </>
   );
 }
+
+

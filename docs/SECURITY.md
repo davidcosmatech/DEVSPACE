@@ -86,6 +86,7 @@ The local provider cannot be activated accidentally when Supabase is configured:
 - Repository URLs are parsed and restricted to `github.com`; non-GitHub links cannot trigger a deletion.
 - If the token is missing, the GitHub option is hidden and the action returns a clear error. GitHub responses (401/403/404/429, timeout) are mapped to safe messages and the repository is never deleted automatically.
 - After a repository deletion the project is kept and only its repository link is cleared.
+- The GitHub page exposes the same delete action only to the workspace Owner whose connected username matches the delete-token owner; the server re-checks the role, the username and the token owner before calling GitHub.
 
 ## Usage metrics
 

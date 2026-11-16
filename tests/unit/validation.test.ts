@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { loginSchema, registerSchema, resetPasswordSchema } from "@/lib/validation/auth";
 import { backupSchema } from "@/lib/validation/backup";
+import { deleteGitHubRepositorySchema } from "@/lib/validation/github";
 import { projectSchema } from "@/lib/validation/project";
 import { changePasswordSchema, profileSchema } from "@/lib/validation/settings";
 import { workspaceLinkSchema, workspaceSchema } from "@/lib/validation/workspace";
@@ -212,5 +213,33 @@ describe("change password validation", () => {
     if (!parsed.success) {
       expect(parsed.error.issues[0]?.message).toContain("different from your current");
     }
+  });
+});
+
+
+describe("GitHub repository deletion validation", () => {
+  it("accepts a valid owner, repository and confirmation", () => {
+    expect(
+      deleteGitHubRepositorySchema.safeParse({
+        owner: "octocat",
+        repo: "Hello-World",
+        confirmation: "octocat/Hello-World",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects invalid owners and repository names", () => {
+    expect(
+      deleteGitHubRepositorySchema.safeParse({ owner: "bad owner", repo: "repo", confirmation: "x" })
+        .success,
+    ).toBe(false);
+    expect(
+      deleteGitHubRepositorySchema.safeParse({ owner: "octocat", repo: "bad/repo", confirmation: "x" })
+        .success,
+    ).toBe(false);
+    expect(
+      deleteGitHubRepositorySchema.safeParse({ owner: "octocat", repo: "repo", confirmation: "" })
+        .success,
+    ).toBe(false);
   });
 });

@@ -212,7 +212,7 @@ After deployment:
 | Private GitHub repos | `GITHUB_PRIVATE_TOKEN` (server-only, read-only) set in Vercel for all environments |
 | Admin access | RBAC roles (`owner`, `admin`, `moderator`, `editor`, `member`, `viewer` + custom). Only `roles.manage` holders can change roles; only an Owner can grant Owner. No email allow-list. |
 | Usage metrics | Derived from `profiles.last_seen_at` (throttled presence) and existing records; no analytics vendor |
-| GitHub repo deletion | `GITHUB_DELETE_TOKEN` (server-only, delete_repo/Administration write) configured; the trash button appears next to linked repositories and requires typing `owner/repo` |
+| GitHub repo deletion | `GITHUB_DELETE_TOKEN` (server-only, delete_repo/Administration write) configured; the trash button appears next to linked repositories on both the GitHub page and project cards, requires typing `owner/repo`, and is restricted to the Owner |
 | Demo workspace | 5 projects, 12 notes, 3 workspaces, 10 tracker records, 8 real uploaded files |
 | Production verification | Login, project CRUD, public/private sections, bulk project updates, workspace assignment, header chat assistant, inline tracker preview, local File Workspace (create/rename/delete/import/preview), GitHub private-repository section, My Tickets sidebar section with open-ticket counter, RBAC admin console (clickable analytics, user profiles, role/permission editing, audit log), password change with re-authentication, project deletion with confirmation and support tickets, Storage upload/download/delete, all pages, theme and export — passed with zero console errors |
 
@@ -265,7 +265,7 @@ GitHub `main` still contains the previous static prototype. The full application
 
 - `npm run typecheck` — passed.
 - `npm run lint` — passed.
-- `npm test` — 74/74 tests passed.
+- `npm test` — 76/76 tests passed.
 - `npm run test:e2e` — 15/15 Playwright flows passed locally.
 - `npm run build` — passed (Next.js 16.4.5).
 - Supabase-mode browser test — login, project CRUD, note autosave/reload, workspace/link CRUD, private Storage upload/download/delete, theme persistence and export passed.

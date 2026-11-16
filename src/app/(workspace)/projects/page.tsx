@@ -3,6 +3,7 @@ import { asc, desc, eq } from "drizzle-orm";
 
 import { ProjectsView } from "@/features/projects/projects-view";
 import { requireViewer } from "@/lib/auth";
+import { getViewerRole } from "@/lib/auth/rbac";
 import { getDb } from "@/lib/db";
 import { projects, workspaces } from "@/lib/db/schema";
 
@@ -29,6 +30,8 @@ export default async function ProjectsPage({
       .orderBy(asc(workspaces.name)),
   ]);
 
+  const viewerRole = await getViewerRole(viewer);
+
   return (
     <ProjectsView
       projects={rows}
@@ -36,8 +39,9 @@ export default async function ProjectsPage({
       initialNew={params.new === "1"}
       initialProjectId={params.project}
       initialWorkspaceId={params.workspace}
-      githubDeleteEnabled={Boolean(process.env.GITHUB_DELETE_TOKEN?.trim())}
+      githubDeleteEnabled={viewerRole?.key === "owner" && Boolean(process.env.GITHUB_DELETE_TOKEN?.trim())}
     />
   );
 }
+
 

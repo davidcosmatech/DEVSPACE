@@ -3,7 +3,8 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-import { authorize } from "@/lib/auth/rbac";
+import { authorize, getViewerRole } from "@/lib/auth/rbac";
+import { getGitHubDeleteOwner, githubDeleteToken } from "@/lib/github-delete";
 import { parseGitHubRepo } from "@/lib/github-repo";
 import { getDb } from "@/lib/db";
 import { projects, workspaces } from "@/lib/db/schema";
@@ -156,12 +157,21 @@ export async function deleteGitHubRepoAction(input: unknown): Promise<ProjectAct
     return { ok: false, error: `Type ${repo.fullName} to confirm.` };
   }
 
-  const token = (process.env.GITHUB_DELETE_TOKEN ?? "").trim();
-  if (!token) {
+  const viewerRole = await getViewerRole(viewer);
+  if (viewerRole?.key !== "owner") {
+    return { ok: false, error: "Only the workspace Owner can delete GitHub repositories." };
+  }
+
+  const token = githubDeleteToken();
+  const tokenOwner = await getGitHubDeleteOwner();
+  if (!token || !tokenOwner) {
     return {
       ok: false,
       error: "Deleting GitHub repositories is not configured on this server.",
     };
+  }
+  if (tokenOwner.toLowerCase() !== repo.owner.toLowerCase()) {
+    return { ok: false, error: "The server GitHub token cannot delete this repository." };
   }
 
   try {
@@ -229,5 +239,6 @@ export async function deleteProjectAction(id: string): Promise<ProjectActionResu
   revalidate();
   return { ok: true };
 }
+
 
 

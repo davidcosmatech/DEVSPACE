@@ -13,7 +13,7 @@ DEVSPACE is a working Next.js application — not a static dashboard mock-up. Ev
 - **Authentication** — registration, email/password sign-in, sign-out, password reset, protected routes and session handling. Supabase Auth in production; a secure local provider for development.
 - **Projects** — full CRUD, public/private sections, workspace grouping, multi-select bulk editing, search, status/technology/workspace filters, priorities, repository links, list and grid views. A trash button next to each linked GitHub repository deletes the repository from inside DEVSPACE after typing its `owner/repo` name; project deletion shows the project name and visibility and never touches GitHub unless that separate repository action is confirmed. Repository deletion requires a server-only `GITHUB_DELETE_TOKEN`.
 - **Notes** — Markdown editor and preview, autosave with unsaved-change protection, pinning, categories, search and deletion.
-- **GitHub** — live public profile and repository data from the GitHub REST API, with a per-user verified snapshot fallback, plus loading, empty, not-found, rate-limit and network-failure states.
+- **GitHub** — live public profile and repository data with a per-user verified snapshot fallback. Public and private repository rows include a **Delete repo** button (Owner only, server token) that removes the repository on GitHub without leaving DEVSPACE; the delete is guarded by typing `owner/repo`.
 - **Private repositories** — the count appears next to *Repos* on the dashboard GitHub card and next to *following* on the GitHub page, with a full-width Private section listing the private repositories the connected account owns. Data is read with a server-only read-only token and shown only to that account.
 - **Browser Workspaces** — workspace CRUD and nested link CRUD with URL validation, categories, safe external links and linked project counts.
 - **File Workspace** — real local folders and files through the File System Access API: create workspaces/subfolders/files, import documents, rename, delete and preview supported formats in the browser. Requires Chrome or Edge; browsers cannot launch Windows Explorer or desktop apps.
@@ -27,7 +27,7 @@ DEVSPACE is a working Next.js application — not a static dashboard mock-up. Ev
 - **Backup & restore** — versioned JSON format, duplicate detection, no cross-account overwrite, transactional import.
 - **Responsive design** — fixed desktop sidebar, drawer navigation on mobile, single-column cards, responsive tables and touch-friendly controls.
 - **Security** — server-derived ownership on every query, Zod validation, secure HttpOnly sessions, RLS policies for Supabase and private file storage.
-- **Quality gates** — TypeScript, ESLint, 74 unit/integration tests, 15 Playwright end-to-end tests and a production build.
+- **Quality gates** — TypeScript, ESLint, 76 unit/integration tests, 15 Playwright end-to-end tests and a production build.
 
 ## Demo
 
@@ -219,9 +219,9 @@ Dark and light themes share the same token system in `src/app/globals.css`. Moti
 |---|
 | ![Delete project](docs/screenshots/delete-project.png) |
 
-| Delete GitHub repository |
-|---|
-| ![Delete GitHub repository](docs/screenshots/delete-github-repo.png) |
+| Delete GitHub repository | GitHub page delete buttons |
+|---|---|
+| ![Delete GitHub repository](docs/screenshots/delete-github-repo.png) | ![GitHub repo buttons](docs/screenshots/github-repo-delete-buttons.png) |
 
 | Markdown preview | Workspaces with projects |
 |---|---|

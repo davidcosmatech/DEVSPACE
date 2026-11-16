@@ -6237,3 +6237,46 @@ svg {
 .repo-delete-link:hover {
   opacity: 1;
 }
+
+/* GitHub repository cards with inline delete action */
+.repo-card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  color: inherit;
+  text-decoration: none;
+}
+
+.repo-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.repo-delete-button {
+  color: var(--danger);
+}
+
+.repo-delete-button:hover {
+  border-color: rgba(251, 113, 133, 0.3);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.private-repo-main {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.private-repo-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}

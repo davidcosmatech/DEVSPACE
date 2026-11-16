@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
+  AlertTriangle,
   ArrowUpRight,
   CalendarDays,
   CircleDot,
@@ -12,15 +13,21 @@ import {
   Lock,
   RefreshCw,
   Star,
+  Trash2,
   Unplug,
   UserRound,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/ui/page-header";
+import { Modal } from "@/components/ui/modal";
 import { Github } from "@/components/icons/github";
 import { Avatar } from "@/components/ui/avatar";
-import { refreshGitHubAction, saveGitHubUsernameAction } from "@/features/github/actions";
+import {
+  deleteGitHubRepositoryAction,
+  refreshGitHubAction,
+  saveGitHubUsernameAction,
+} from "@/features/github/actions";
 import type { GitHubDisplayResult } from "@/lib/github";
 import { summarizePrivateRepos } from "@/lib/github-private";
 import { formatBytes, formatDate, relativeTime } from "@/lib/utils";
@@ -28,9 +35,11 @@ import { formatBytes, formatDate, relativeTime } from "@/lib/utils";
 export function GitHubView({
   username,
   result,
+  githubDeleteEnabled,
 }: {
   username: string | null;
   result: GitHubDisplayResult | null;
+  githubDeleteEnabled: boolean;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(!username);
@@ -38,6 +47,13 @@ export function GitHubView({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [refreshing, setRefreshing] = useState(false);
+  const [repoDeleteTarget, setRepoDeleteTarget] = useState<{
+    owner: string;
+    repo: string;
+    isPrivate: boolean;
+  } | null>(null);
+  const [repoConfirmation, setRepoConfirmation] = useState("");
+  const [repoDeleting, setRepoDeleting] = useState(false);
   const privateSummary = result?.ok ? summarizePrivateRepos(result.privateRepos) : null;
 
   async function save(event: React.FormEvent) {
@@ -67,6 +83,40 @@ export function GitHubView({
     }
   }
 
+  function askDeleteRepo(owner: string, repo: string, isPrivate: boolean) {
+    setRepoDeleteTarget({ owner, repo, isPrivate });
+    setRepoConfirmation("");
+  }
+
+  function closeDeleteRepo() {
+    if (repoDeleting) return;
+    setRepoDeleteTarget(null);
+    setRepoConfirmation("");
+  }
+
+  async function deleteRepository() {
+    if (!repoDeleteTarget || repoDeleting) return;
+    setRepoDeleting(true);
+    try {
+      const result = await deleteGitHubRepositoryAction({
+        owner: repoDeleteTarget.owner,
+        repo: repoDeleteTarget.repo,
+        confirmation: repoConfirmation,
+      });
+      if (!result.ok) {
+        toast.error(result.error ?? "Could not delete the GitHub repository.");
+        return;
+      }
+      toast.success(
+        result.message ?? `GitHub repository ${repoDeleteTarget.owner}/${repoDeleteTarget.repo} deleted.`,
+      );
+      setRepoDeleteTarget(null);
+      setRepoConfirmation("");
+      router.refresh();
+    } finally {
+      setRepoDeleting(false);
+    }
+  }
   async function disconnect() {
     const result = await saveGitHubUsernameAction({ username: "" });
     if (!result.ok) {
@@ -253,32 +303,53 @@ export function GitHubView({
           ) : (
             <div className="repo-grid">
               {result.repos.map((repo) => (
-                <a
-                  key={repo.id}
-                  href={repo.htmlUrl}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="repo-card"
-                >
-                  <div className="repo-name">
-                    <Github size={14} /> {repo.name}
-                  </div>
-                  <p className="repo-desc">{repo.description || "No description provided."}</p>
-                  <div className="repo-meta">
-                    {repo.language ? (
+                <article key={repo.id} className="repo-card">
+                  <a
+                    href={repo.htmlUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="repo-card-body"
+                  >
+                    <div className="repo-name">
+                      <Github size={14} /> {repo.name}
+                    </div>
+                    <p className="repo-desc">{repo.description || "No description provided."}</p>
+                    <div className="repo-meta">
+                      {repo.language ? (
+                        <span>
+                          <span className="language-dot" /> {repo.language}
+                        </span>
+                      ) : null}
                       <span>
-                        <span className="language-dot" /> {repo.language}
+                        <Star size={11} /> {repo.stars}
                       </span>
+                      <span>
+                        <GitFork size={11} /> {repo.forks}
+                      </span>
+                      <span style={{ marginLeft: "auto" }}>Updated {relativeTime(repo.updatedAt)}</span>
+                    </div>
+                  </a>
+                  <div className="repo-card-actions">
+                    <a
+                      href={repo.htmlUrl}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="panel-link"
+                    >
+                      Open <ArrowUpRight size={12} />
+                    </a>
+                    {githubDeleteEnabled && result.profile.login ? (
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm repo-delete-button"
+                        onClick={() => askDeleteRepo(result.profile.login, repo.name, false)}
+                        title="Delete GitHub repository"
+                      >
+                        <Trash2 size={13} /> Delete repo
+                      </button>
                     ) : null}
-                    <span>
-                      <Star size={11} /> {repo.stars}
-                    </span>
-                    <span>
-                      <GitFork size={11} /> {repo.forks}
-                    </span>
-                    <span style={{ marginLeft: "auto" }}>Updated {relativeTime(repo.updatedAt)}</span>
                   </div>
-                </a>
+                </article>
               ))}
             </div>
           )}
@@ -362,14 +433,13 @@ export function GitHubView({
               ) : (
                 <div className="private-repo-list">
                   {result.privateRepos.map((repo) => (
-                    <a
-                      key={repo.id}
-                      href={repo.htmlUrl}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="private-repo-row"
-                    >
-                      <div className="private-repo-main">
+                    <div key={repo.id} className="private-repo-row">
+                      <a
+                        href={repo.htmlUrl}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="private-repo-main"
+                      >
                         <div className="private-repo-name">
                           <Lock size={13} />
                           {repo.name}
@@ -399,16 +469,35 @@ export function GitHubView({
                           </span>
                           <span>{formatBytes((repo.sizeKb ?? 0) * 1024)}</span>
                         </div>
-                      </div>
+                      </a>
                       <div className="private-repo-side">
                         <span className="private-repo-updated">
                           Updated {relativeTime(repo.updatedAt)}
                         </span>
-                        <span className="btn btn-secondary btn-sm">
-                          Open <ArrowUpRight size={13} />
-                        </span>
+                        <div className="private-repo-actions">
+                          <a
+                            href={repo.htmlUrl}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            className="btn btn-secondary btn-sm"
+                          >
+                            Open <ArrowUpRight size={13} />
+                          </a>
+                          {githubDeleteEnabled && result.privateOwner ? (
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-sm repo-delete-button"
+                              onClick={() =>
+                                askDeleteRepo(result.privateOwner as string, repo.name, true)
+                              }
+                              title="Delete GitHub repository"
+                            >
+                              <Trash2 size={13} /> Delete
+                            </button>
+                          ) : null}
+                        </div>
                       </div>
-                    </a>
+                    </div>
                   ))}
                 </div>
               )}
@@ -436,6 +525,81 @@ export function GitHubView({
           <p>Connect a username to show live repository counts, languages and activity.</p>
         </div>
       ) : null}
+      <Modal
+        open={Boolean(repoDeleteTarget)}
+        onClose={closeDeleteRepo}
+        title="Delete GitHub repository?"
+        description="This permanently deletes the repository on GitHub."
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={closeDeleteRepo}
+              disabled={repoDeleting}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-danger"
+              onClick={deleteRepository}
+              disabled={
+                repoDeleting ||
+                !repoDeleteTarget ||
+                repoConfirmation.trim().toLowerCase() !==
+                  `${repoDeleteTarget.owner}/${repoDeleteTarget.repo}`.toLowerCase()
+              }
+            >
+              <Trash2 size={14} />
+              {repoDeleting ? "Deleting…" : "Delete repository"}
+            </button>
+          </>
+        }
+      >
+        {repoDeleteTarget ? (
+          <div className="delete-project-body">
+            <div className="delete-project-target">
+              <span className="delete-project-icon">
+                <Trash2 size={17} />
+              </span>
+              <div>
+                <strong>
+                  {repoDeleteTarget.owner}/{repoDeleteTarget.repo}
+                </strong>
+                <p>{repoDeleteTarget.isPrivate ? "Private repository" : "Public repository"}</p>
+              </div>
+            </div>
+            <p className="delete-project-warning">
+              <AlertTriangle size={15} />
+              This deletes the GitHub repository, including its code, issues, pull requests and
+              releases. Your DEVSPACE projects are kept and matching repository links are cleared.
+            </p>
+            <div className="field">
+              <label className="label" htmlFor="github-page-repo-confirmation">
+                Type the repository name to confirm
+              </label>
+              <p className="label-hint">
+                <code>
+                  {repoDeleteTarget.owner}/{repoDeleteTarget.repo}
+                </code>
+              </p>
+              <input
+                id="github-page-repo-confirmation"
+                className="input"
+                value={repoConfirmation}
+                onChange={(event) => setRepoConfirmation(event.target.value)}
+                placeholder={`${repoDeleteTarget.owner}/${repoDeleteTarget.repo}`}
+                autoComplete="off"
+                autoFocus
+              />
+            </div>
+          </div>
+        ) : null}
+      </Modal>
     </>
   );
 }
+
+
+

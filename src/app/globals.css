@@ -6198,3 +6198,42 @@ svg {
   font-family: var(--font-mono);
   font-size: 10.5px;
 }
+
+/* Delete GitHub repository controls next to the repository link */
+.repo-delete-icon {
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  margin-left: -2px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--danger);
+  cursor: pointer;
+  opacity: 0.75;
+  transition:
+    opacity 150ms ease,
+    background 150ms ease,
+    border-color 150ms ease;
+}
+
+.repo-delete-icon:hover {
+  border-color: rgba(251, 113, 133, 0.3);
+  background: var(--danger-soft);
+  opacity: 1;
+}
+
+.repo-delete-link {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--danger);
+  font: inherit;
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.repo-delete-link:hover {
+  opacity: 1;
+}

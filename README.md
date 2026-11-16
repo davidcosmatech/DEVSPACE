@@ -11,7 +11,7 @@ DEVSPACE is a working Next.js application — not a static dashboard mock-up. Ev
 ## What is included
 
 - **Authentication** — registration, email/password sign-in, sign-out, password reset, protected routes and session handling. Supabase Auth in production; a secure local provider for development.
-- **Projects** — full CRUD, public/private sections, workspace grouping, multi-select bulk editing, search, status/technology/workspace filters, priorities, repository links, list and grid views. Deletion shows the project name and visibility in a confirmation dialog; removing a project never deletes its GitHub repository, which requires a separate explicit confirmation and a server-only `GITHUB_DELETE_TOKEN`.
+- **Projects** — full CRUD, public/private sections, workspace grouping, multi-select bulk editing, search, status/technology/workspace filters, priorities, repository links, list and grid views. A trash button next to each linked GitHub repository deletes the repository from inside DEVSPACE after typing its `owner/repo` name; project deletion shows the project name and visibility and never touches GitHub unless that separate repository action is confirmed. Repository deletion requires a server-only `GITHUB_DELETE_TOKEN`.
 - **Notes** — Markdown editor and preview, autosave with unsaved-change protection, pinning, categories, search and deletion.
 - **GitHub** — live public profile and repository data from the GitHub REST API, with a per-user verified snapshot fallback, plus loading, empty, not-found, rate-limit and network-failure states.
 - **Private repositories** — the count appears next to *Repos* on the dashboard GitHub card and next to *following* on the GitHub page, with a full-width Private section listing the private repositories the connected account owns. Data is read with a server-only read-only token and shown only to that account.
@@ -218,6 +218,10 @@ Dark and light themes share the same token system in `src/app/globals.css`. Moti
 | Delete project confirmation |
 |---|
 | ![Delete project](docs/screenshots/delete-project.png) |
+
+| Delete GitHub repository |
+|---|
+| ![Delete GitHub repository](docs/screenshots/delete-github-repo.png) |
 
 | Markdown preview | Workspaces with projects |
 |---|---|

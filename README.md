@@ -11,14 +11,14 @@ DEVSPACE is a working Next.js application — not a static dashboard mock-up. Ev
 ## What is included
 
 - **Authentication** — registration, email/password sign-in, sign-out, password reset, protected routes and session handling. Supabase Auth in production; a secure local provider for development.
-- **Projects** — full CRUD, public/private sections, workspace grouping, multi-select bulk editing, search, status/technology/workspace filters, priorities, repository links, list and grid views.
+- **Projects** — full CRUD, public/private sections, workspace grouping, multi-select bulk editing, search, status/technology/workspace filters, priorities, repository links, list and grid views. Deletion shows the project name and visibility in a confirmation dialog; removing a project never deletes its GitHub repository, which requires a separate explicit confirmation and a server-only `GITHUB_DELETE_TOKEN`.
 - **Notes** — Markdown editor and preview, autosave with unsaved-change protection, pinning, categories, search and deletion.
 - **GitHub** — live public profile and repository data from the GitHub REST API, with a per-user verified snapshot fallback, plus loading, empty, not-found, rate-limit and network-failure states.
 - **Private repositories** — the count appears next to *Repos* on the dashboard GitHub card and next to *following* on the GitHub page, with a full-width Private section listing the private repositories the connected account owns. Data is read with a server-only read-only token and shown only to that account.
 - **Browser Workspaces** — workspace CRUD and nested link CRUD with URL validation, categories, safe external links and linked project counts.
 - **File Workspace** — real local folders and files through the File System Access API: create workspaces/subfolders/files, import documents, rename, delete and preview supported formats in the browser. Requires Chrome or Edge; browsers cannot launch Windows Explorer or desktop apps.
 - **Markdown Tracker** — real file uploads with byte-level progress, private per-user storage, inline Markdown preview, download, pending records and deletion.
-- **Workspace chat** — a header chat assistant that answers questions from the signed-in user's real projects, notes, workspaces, files and GitHub status.
+- **Workspace chatbot** — a header chatbot (also available at `/chat`) that answers questions from the signed-in user's real projects, notes, workspaces, files and GitHub status, with optional AI backing via `OPENAI_API_KEY`.
 - **Support tickets** — a **My Tickets** section in the sidebar (with an open-ticket counter) plus `/support`, where every user can open a ticket and follow the administrator reply and status. Replies also appear in the notification bell.
 - **Admin console & RBAC** — role-based access with Owner, Admin, Moderator, Editor, Member, Viewer and custom roles. Clickable analytics (people, active today/week, new signups, awaiting replies), searchable/sortable/paginated user management with full profiles and activity, role and permission editing, login-email changes through the Supabase Admin API, and an append-only audit log. Every permission is enforced on the server; a shield shortcut sits next to the header bell.
 - **Quick create** — `/new` opens a create hub for notes, projects, workspaces, local files and support tickets, also reachable from the command palette.
@@ -27,7 +27,7 @@ DEVSPACE is a working Next.js application — not a static dashboard mock-up. Ev
 - **Backup & restore** — versioned JSON format, duplicate detection, no cross-account overwrite, transactional import.
 - **Responsive design** — fixed desktop sidebar, drawer navigation on mobile, single-column cards, responsive tables and touch-friendly controls.
 - **Security** — server-derived ownership on every query, Zod validation, secure HttpOnly sessions, RLS policies for Supabase and private file storage.
-- **Quality gates** — TypeScript, ESLint, 70 unit/integration tests, 14 Playwright end-to-end tests and a production build.
+- **Quality gates** — TypeScript, ESLint, 74 unit/integration tests, 15 Playwright end-to-end tests and a production build.
 
 ## Demo
 
@@ -214,6 +214,10 @@ Dark and light themes share the same token system in `src/app/globals.css`. Moti
 | Password & Security | Change password |
 |---|---|
 | ![Password security](docs/screenshots/account-password.png) | ![Change password](docs/screenshots/change-password-modal.png) |
+
+| Delete project confirmation |
+|---|
+| ![Delete project](docs/screenshots/delete-project.png) |
 
 | Markdown preview | Workspaces with projects |
 |---|---|

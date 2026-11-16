@@ -41,3 +41,8 @@ export const bulkProjectPatchSchema = z.object({
   visibility: z.enum(projectVisibilities).optional(),
   workspaceId: z.string().uuid().nullable().optional(),
 });
+
+export const deleteGitHubRepoSchema = z.object({
+  projectId: z.string().uuid(),
+  confirmation: z.string().trim().min(1, "Type the repository name to confirm."),
+});

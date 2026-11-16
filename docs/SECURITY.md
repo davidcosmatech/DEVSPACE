@@ -77,6 +77,16 @@ The local provider cannot be activated accidentally when Supabase is configured:
 - Every change is recorded as `user.email_changed` in `audit_logs` with the previous and new address.
 - The profile copy in `profiles.email` is updated in the same operation so the admin console and support views stay consistent.
 
+## Project deletion
+
+- `deleteProjectAction` resolves the viewer from the session and deletes with `id + user_id` in the predicate, so another user's project is never matched.
+- The confirmation dialog does not mutate anything until the user presses **Remove from DEVSPACE**; the button is disabled while the request is in flight to prevent double deletion.
+- Deleting a project removes only the DEVSPACE row. It never calls GitHub and leaves the linked repository untouched.
+- GitHub repository deletion is a distinct action (`deleteGitHubRepoAction`) requiring the repository name to be typed and a server-only `GITHUB_DELETE_TOKEN` with `delete_repo` (classic) or Administration write (fine-grained) permission. The token is never sent to the browser or logged.
+- Repository URLs are parsed and restricted to `github.com`; non-GitHub links cannot trigger a deletion.
+- If the token is missing, the GitHub option is hidden and the action returns a clear error. GitHub responses (401/403/404/429, timeout) are mapped to safe messages and the repository is never deleted automatically.
+- After a repository deletion the project is kept and only its repository link is cleared.
+
 ## Usage metrics
 
 - Presence is derived from `profiles.last_seen_at`, refreshed at most once every five minutes per viewer.

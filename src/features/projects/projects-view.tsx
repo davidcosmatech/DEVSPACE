@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  AlertTriangle,
   ArrowUpRight,
   Check,
   FolderKanban,
@@ -21,16 +22,17 @@ import { toast } from "sonner";
 
 import { PageHeader } from "@/components/ui/page-header";
 import { Github } from "@/components/icons/github";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Modal } from "@/components/ui/modal";
 import { PriorityBadge, ProjectGlyph, StatusBadge } from "@/components/ui/badges";
 import {
   bulkUpdateProjectsAction,
   createProjectAction,
+  deleteGitHubRepoAction,
   deleteProjectAction,
   updateProjectAction,
 } from "@/features/projects/actions";
 import type { Project } from "@/lib/db/schema";
+import { parseGitHubRepo } from "@/lib/github-repo";
 import {
   projectPriorities,
   projectSchema,
@@ -48,12 +50,14 @@ export function ProjectsView({
   initialNew,
   initialProjectId,
   initialWorkspaceId,
+  githubDeleteEnabled,
 }: {
   projects: Project[];
   workspaces: WorkspaceOption[];
   initialNew: boolean;
   initialProjectId?: string;
   initialWorkspaceId?: string;
+  githubDeleteEnabled: boolean;
 }) {
   const router = useRouter();
   const initialProject = initialProjectId
@@ -71,6 +75,9 @@ export function ProjectsView({
   const [modalOpen, setModalOpen] = useState(initialNew || Boolean(initialProject));
   const [editing, setEditing] = useState<Project | null>(initialProject);
   const [deleting, setDeleting] = useState<Project | null>(null);
+  const [deleteStep, setDeleteStep] = useState<"project" | "github">("project");
+  const [repoConfirmation, setRepoConfirmation] = useState("");
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkWorkspace, setBulkWorkspace] = useState("");
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -155,21 +162,67 @@ export function ProjectsView({
     setModalOpen(true);
   }
 
+  function askDelete(project: Project) {
+    setDeleting(project);
+    setDeleteStep("project");
+    setRepoConfirmation("");
+  }
+
+  function closeDelete() {
+    if (deleteBusy) return;
+    setDeleting(null);
+    setDeleteStep("project");
+    setRepoConfirmation("");
+  }
+
   async function onDelete() {
-    if (!deleting) return;
-    const result = await deleteProjectAction(deleting.id);
-    if (!result.ok) {
-      toast.error(result.error ?? "Could not delete project.");
+    if (!deleting || deleteBusy) return;
+    setDeleteBusy(true);
+    try {
+      const result = await deleteProjectAction(deleting.id);
+      if (!result.ok) {
+        toast.error(result.error ?? "Could not delete project.");
+        return;
+      }
+      toast.success(`Deleted ${deleting.name}.`);
+      setSelected((current) => {
+        const next = new Set(current);
+        next.delete(deleting.id);
+        return next;
+      });
+      setDeleting(null);
+      setDeleteStep("project");
+      router.refresh();
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
+
+  async function onDeleteGitHub() {
+    if (!deleting || deleteBusy) return;
+    const repo = parseGitHubRepo(deleting.repositoryUrl);
+    if (!repo) {
+      toast.error("This project is not linked to a valid GitHub repository.");
       return;
     }
-    toast.success(`Deleted ${deleting.name}.`);
-    setSelected((current) => {
-      const next = new Set(current);
-      next.delete(deleting.id);
-      return next;
-    });
-    setDeleting(null);
-    router.refresh();
+    setDeleteBusy(true);
+    try {
+      const result = await deleteGitHubRepoAction({
+        projectId: deleting.id,
+        confirmation: repoConfirmation,
+      });
+      if (!result.ok) {
+        toast.error(result.error ?? "Could not delete the GitHub repository.");
+        return;
+      }
+      toast.success(result.message ?? `GitHub repository ${repo.fullName} deleted.`);
+      setDeleting(null);
+      setDeleteStep("project");
+      setRepoConfirmation("");
+      router.refresh();
+    } finally {
+      setDeleteBusy(false);
+    }
   }
 
   async function applyBulk(patch: { visibility?: "public" | "private"; workspaceId?: string | null }) {
@@ -266,7 +319,7 @@ export function ProjectsView({
               <button
                 type="button"
                 className="icon-button"
-                onClick={() => setDeleting(project)}
+                onClick={() => askDelete(project)}
                 aria-label={`Delete ${project.name}`}
                 style={{ color: "var(--danger)" }}
               >
@@ -328,7 +381,14 @@ export function ProjectsView({
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => openEdit(project)}>
                   <Pencil size={13} /> Edit
                 </button>
-                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setDeleting(project)}>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => askDelete(project)}
+                  aria-label={`Delete ${project.name}`}
+                  title="Delete project"
+                  style={{ color: "var(--danger)" }}
+                >
                   <Trash2 size={13} />
                 </button>
               </div>
@@ -381,6 +441,8 @@ export function ProjectsView({
       </section>
     );
   }
+
+  const deleteRepo = parseGitHubRepo(deleting?.repositoryUrl);
 
   return (
     <>
@@ -583,13 +645,142 @@ export function ProjectsView({
         }}
       />
 
-      <ConfirmDialog
+      <Modal
         open={Boolean(deleting)}
-        onClose={() => setDeleting(null)}
-        onConfirm={onDelete}
-        title={`Delete ${deleting?.name ?? "project"}?`}
-        description="This removes the project and its metadata from your workspace."
-      />
+        onClose={closeDelete}
+        title={deleteStep === "github" ? "Delete GitHub repository?" : "Delete project?"}
+        description={
+          deleteStep === "github"
+            ? "This is separate from deleting the project in DEVSPACE."
+            : "Choose carefully what should be removed."
+        }
+        footer={
+          deleteStep === "github" && deleteRepo ? (
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setDeleteStep("project");
+                  setRepoConfirmation("");
+                }}
+                disabled={deleteBusy}
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={onDeleteGitHub}
+                disabled={deleteBusy || repoConfirmation.trim().toLowerCase() !== deleteRepo.fullName.toLowerCase()}
+              >
+                <Trash2 size={14} />
+                {deleteBusy ? "Deleting…" : "Delete GitHub repository"}
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" className="btn btn-secondary" onClick={closeDelete} disabled={deleteBusy}>
+                Cancel
+              </button>
+              <button type="button" className="btn btn-danger" onClick={onDelete} disabled={deleteBusy}>
+                <Trash2 size={14} />
+                {deleteBusy ? "Deleting…" : "Remove from DEVSPACE"}
+              </button>
+            </>
+          )
+        }
+      >
+        {deleting && deleteStep === "project" ? (
+          <div className="delete-project-body">
+            <div className="delete-project-target">
+              <span className="delete-project-icon">
+                <Trash2 size={17} />
+              </span>
+              <div>
+                <strong>{deleting.name}</strong>
+                <p>
+                  <span
+                    className={cn(
+                      "badge",
+                      deleting.visibility === "public" ? "badge-green" : "badge-slate",
+                    )}
+                  >
+                    {deleting.visibility === "public" ? <Globe2 size={10} /> : <Lock size={10} />}
+                    {deleting.visibility === "public" ? "Public" : "Private"}
+                  </span>{" "}
+                  project
+                </p>
+              </div>
+            </div>
+
+            <p className="delete-project-warning">
+              <AlertTriangle size={15} />
+              Removing the project deletes its DEVSPACE record and removes it from the Public or
+              Private list. This cannot be undone easily.
+            </p>
+
+            {deleteRepo ? (
+              <div className="delete-project-github">
+                <div>
+                  <span className="label">Linked GitHub repository</span>
+                  <a href={deleteRepo.htmlUrl} target="_blank" rel="noreferrer noopener">
+                    <Github size={14} /> {deleteRepo.fullName}
+                  </a>
+                </div>
+                <p>
+                  Removing the project from DEVSPACE does <strong>not</strong> delete this GitHub
+                  repository.
+                </p>
+                {githubDeleteEnabled ? (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    style={{ color: "var(--danger)" }}
+                    onClick={() => {
+                      setDeleteStep("github");
+                      setRepoConfirmation("");
+                    }}
+                    disabled={deleteBusy}
+                  >
+                    <Trash2 size={13} /> Delete GitHub repository…
+                  </button>
+                ) : (
+                  <p className="label-hint">
+                    GitHub repository deletion is not enabled on this server, so the repository is
+                    always left untouched.
+                  </p>
+                )}
+              </div>
+            ) : null}
+          </div>
+        ) : deleting && deleteRepo ? (
+          <div className="delete-project-body">
+            <p className="delete-project-warning">
+              <AlertTriangle size={15} />
+              This permanently deletes <strong>{deleteRepo.fullName}</strong> on GitHub, including
+              its code, issues, pull requests and releases. This is not reversible.
+            </p>
+            <p>
+              The DEVSPACE project will be kept; only its repository link is cleared.
+            </p>
+            <div className="field">
+              <label className="label" htmlFor="delete-repo-confirmation">
+                Type <code>{deleteRepo.fullName}</code> to confirm
+              </label>
+              <input
+                id="delete-repo-confirmation"
+                className="input"
+                value={repoConfirmation}
+                onChange={(event) => setRepoConfirmation(event.target.value)}
+                placeholder={deleteRepo.fullName}
+                autoComplete="off"
+                autoFocus
+              />
+            </div>
+          </div>
+        ) : null}
+      </Modal>
     </>
   );
 }
@@ -798,3 +989,6 @@ function ProjectModal({
     </Modal>
   );
 }
+
+
+

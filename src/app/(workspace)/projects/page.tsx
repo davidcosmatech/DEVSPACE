@@ -36,6 +36,8 @@ export default async function ProjectsPage({
       initialNew={params.new === "1"}
       initialProjectId={params.project}
       initialWorkspaceId={params.workspace}
+      githubDeleteEnabled={Boolean(process.env.GITHUB_DELETE_TOKEN?.trim())}
     />
   );
 }
+

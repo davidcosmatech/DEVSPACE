@@ -6101,3 +6101,100 @@ svg {
   min-height: 0;
   padding-bottom: 4px;
 }
+
+/* Delete project confirmation */
+.delete-project-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.delete-project-target {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--bg-elevated);
+  padding: 12px 14px;
+}
+
+.delete-project-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  place-items: center;
+  border-radius: 9px;
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.delete-project-target strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 640;
+}
+
+.delete-project-target p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.delete-project-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  border: 1px solid rgba(251, 113, 133, 0.22);
+  border-radius: 10px;
+  background: var(--danger-soft);
+  padding: 11px 12px;
+  color: var(--muted-strong);
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+
+.delete-project-warning svg {
+  flex: none;
+  margin-top: 1px;
+  color: var(--danger);
+}
+
+.delete-project-github {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.delete-project-github a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+
+.delete-project-github p {
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.55;
+}
+
+.delete-project-body code {
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg-elevated);
+  padding: 1px 5px;
+  color: var(--text-soft);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+}

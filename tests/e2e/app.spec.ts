@@ -55,7 +55,39 @@ test("creates, edits and deletes a project", async ({ page }) => {
   await expect(page.locator(".data-row", { hasText: name }).getByText("Completed")).toBeVisible();
 
   await page.getByRole("button", { name: `Delete ${name}` }).click();
-  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  const deleteDialog = page.getByRole("dialog");
+  await expect(deleteDialog).toContainText(name);
+  await expect(deleteDialog).toContainText("Private");
+  await expect(deleteDialog).toContainText("cannot be undone easily");
+  await deleteDialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByText(name).first()).toBeVisible();
+
+  await page.getByRole("button", { name: `Edit ${name}` }).click();
+  await page.locator("#project-visibility").selectOption("public");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await page.getByRole("button", { name: `Delete ${name}` }).click();
+  await expect(page.getByRole("dialog")).toContainText("Public");
+  await page.getByRole("button", { name: "Remove from DEVSPACE" }).click();
+  await expect(page.getByText(name)).toHaveCount(0);
+});
+
+test("deletes a GitHub-linked project without deleting its repository", async ({ page }) => {
+  const name = `E2E GitHub Project ${suffix}`;
+  await signIn(page);
+  await page.goto("/projects?new=1");
+  await page.locator("#project-name").fill(name);
+  await page.locator("#project-repository").fill("https://github.com/octocat/Hello-World");
+  await page.getByRole("button", { name: "Create project" }).click();
+  await expect(page.getByText(name).first()).toBeVisible();
+
+  await page.getByRole("button", { name: `Delete ${name}` }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("octocat/Hello-World");
+  await expect(dialog).toContainText("does not");
+  await expect(dialog.getByRole("button", { name: /Delete GitHub repository/ })).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await page.getByRole("button", { name: `Delete ${name}` }).click();
+  await page.getByRole("button", { name: "Remove from DEVSPACE" }).click();
   await expect(page.getByText(name)).toHaveCount(0);
 });
 
@@ -305,3 +337,4 @@ test("changes the password after re-authenticating", async ({ page }) => {
   await page.waitForURL("**/dashboard", { timeout: 60_000 });
   await expect(page.getByRole("heading", { name: /Welcome back/ })).toBeVisible();
 });
+

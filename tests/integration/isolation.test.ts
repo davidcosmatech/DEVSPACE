@@ -2,7 +2,7 @@ import path from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { localAccounts, profiles, projects } from "@/lib/db/schema";
@@ -89,9 +89,22 @@ describe("database ownership isolation", () => {
     expect(userAProjects[0].status).toBe("Active");
   });
 
+  it("prevents cross-user deletes when ownership is part of the predicate", async () => {
+    const projectB = (await db.select().from(projects).where(eq(projects.userId, userB)))[0];
+    const result = await db
+      .delete(projects)
+      .where(and(eq(projects.id, projectB.id), eq(projects.userId, userA)))
+      .returning({ id: projects.id });
+
+    expect(result).toHaveLength(0);
+    const stillThere = await db.select().from(projects).where(eq(projects.id, projectB.id));
+    expect(stillThere).toHaveLength(1);
+  });
+
   it("cascades owned records when a profile is deleted", async () => {
     await db.delete(profiles).where(eq(profiles.id, userB));
     const remaining = await db.select().from(projects).where(eq(projects.userId, userB));
     expect(remaining).toHaveLength(0);
   });
 });
+
